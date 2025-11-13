@@ -1,0 +1,9 @@
+{
+  "agentId": "sample-agent",
+  "name": "Sample Agent",
+  "domain": "demo",
+  "cloud": "GCP",
+  "version": "1.0.0",
+  "description": "A demo agent for testing deployments",
+  "endpoint": "https://to-be-updated.after-deploy"
+}

@@ -1,0 +1,21 @@
+name: Deploy Agents
+on:
+  push:
+    paths:
+      - 'agents/**'
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+      - name: Deploy agents
+        run: |
+          for dir in agents/*/ ; do
+            cd "$dir"
+            vercel --prod --token=$VERCEL_TOKEN
+            cd ../..
+          done
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

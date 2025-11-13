@@ -1,0 +1,12 @@
+# Placeholder workflow for scaffolding new agents via GitHub Actions or Copilot
+name: Scaffold New Agent
+on:
+  workflow_dispatch:
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Run scaffold generator
+        run: echo "Scaffold generator would run here"

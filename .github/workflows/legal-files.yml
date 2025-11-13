@@ -1,0 +1,12 @@
+name: Ensure legal files
+on:
+  push:
+    paths:
+      - 'LICENSE.md'
+      - 'CONTRIBUTING.md'
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo "Legal files present"

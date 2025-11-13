@@ -1,0 +1,9 @@
+name: sample-demo-orchestrator
+agents:
+  - id: sample-agent
+    input:
+      key: "test"
+sequence:
+  - agent: sample-agent
+    input:
+      message: "Hello from workflow"
