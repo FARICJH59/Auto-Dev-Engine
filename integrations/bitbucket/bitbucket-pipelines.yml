@@ -4,11 +4,11 @@ definitions:
   caches:
     npm: ~/.npm
     node: node_modules
-  
+
   services:
     docker:
       memory: 2048
-  
+
   steps:
     - step: &build-step
         name: Build
@@ -23,7 +23,7 @@ definitions:
         artifacts:
           - dist/**
           - node_modules/**
-    
+
     - step: &test-unit
         name: Unit Tests
         caches:
@@ -33,7 +33,7 @@ definitions:
           - npm run test:unit
         artifacts:
           - coverage/**
-    
+
     - step: &test-integration
         name: Integration Tests
         caches:
@@ -41,7 +41,7 @@ definitions:
         script:
           - echo "Running integration tests..."
           - npm run test:integration
-    
+
     - step: &lint-step
         name: Lint
         caches:
@@ -49,7 +49,7 @@ definitions:
         script:
           - echo "Running linter..."
           - npm run lint
-    
+
     - step: &security-audit
         name: Security Audit
         caches:
@@ -57,7 +57,7 @@ definitions:
         script:
           - echo "Running security audit..."
           - npm audit --audit-level=moderate
-    
+
     - step: &deploy-staging
         name: Deploy to Staging
         deployment: staging
@@ -68,7 +68,7 @@ definitions:
           - npm run deploy:staging
         artifacts:
           - deployment-logs/**
-    
+
     - step: &deploy-production
         name: Deploy to Production
         deployment: production
@@ -98,7 +98,7 @@ pipelines:
           - step: *lint-step
       - step: *security-audit
       - step: *deploy-production
-    
+
     develop:
       - step: *build-step
       - parallel:
@@ -107,7 +107,7 @@ pipelines:
           - step: *lint-step
       - step: *security-audit
       - step: *deploy-staging
-    
+
     feature/*:
       - step: *build-step
       - parallel:
@@ -159,14 +159,14 @@ pipelines:
       - step: *build-step
       - step: *test-unit
       - step: *deploy-staging
-    
+
     deploy-production:
       - step: *build-step
       - parallel:
           - step: *test-unit
           - step: *test-integration
       - step: *deploy-production
-    
+
     security-scan:
       - step: *build-step
       - step: *security-audit
@@ -175,7 +175,7 @@ pipelines:
           script:
             - echo "Running deep security scan..."
             - npm run security:scan
-    
+
     build-docker:
       - step:
           name: Build and Push Docker Image
