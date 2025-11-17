@@ -1,0 +1,199 @@
+image: node:18
+
+definitions:
+  caches:
+    npm: ~/.npm
+    node: node_modules
+  
+  services:
+    docker:
+      memory: 2048
+  
+  steps:
+    - step: &build-step
+        name: Build
+        caches:
+          - node
+          - npm
+        script:
+          - echo "Installing dependencies..."
+          - npm ci
+          - echo "Building project..."
+          - npm run build
+        artifacts:
+          - dist/**
+          - node_modules/**
+    
+    - step: &test-unit
+        name: Unit Tests
+        caches:
+          - node
+        script:
+          - echo "Running unit tests..."
+          - npm run test:unit
+        artifacts:
+          - coverage/**
+    
+    - step: &test-integration
+        name: Integration Tests
+        caches:
+          - node
+        script:
+          - echo "Running integration tests..."
+          - npm run test:integration
+    
+    - step: &lint-step
+        name: Lint
+        caches:
+          - node
+        script:
+          - echo "Running linter..."
+          - npm run lint
+    
+    - step: &security-audit
+        name: Security Audit
+        caches:
+          - node
+        script:
+          - echo "Running security audit..."
+          - npm audit --audit-level=moderate
+    
+    - step: &deploy-staging
+        name: Deploy to Staging
+        deployment: staging
+        caches:
+          - node
+        script:
+          - echo "Deploying to staging..."
+          - npm run deploy:staging
+        artifacts:
+          - deployment-logs/**
+    
+    - step: &deploy-production
+        name: Deploy to Production
+        deployment: production
+        trigger: manual
+        caches:
+          - node
+        script:
+          - echo "Deploying to production..."
+          - npm run deploy:production
+        artifacts:
+          - deployment-logs/**
+
+pipelines:
+  default:
+    - step: *build-step
+    - parallel:
+        - step: *test-unit
+        - step: *lint-step
+    - step: *security-audit
+
+  branches:
+    main:
+      - step: *build-step
+      - parallel:
+          - step: *test-unit
+          - step: *test-integration
+          - step: *lint-step
+      - step: *security-audit
+      - step: *deploy-production
+    
+    develop:
+      - step: *build-step
+      - parallel:
+          - step: *test-unit
+          - step: *test-integration
+          - step: *lint-step
+      - step: *security-audit
+      - step: *deploy-staging
+    
+    feature/*:
+      - step: *build-step
+      - parallel:
+          - step: *test-unit
+          - step: *lint-step
+      - step: *security-audit
+
+  pull-requests:
+    '**':
+      - step: *build-step
+      - parallel:
+          - step: *test-unit
+          - step: *test-integration
+          - step: *lint-step
+      - step: *security-audit
+      - step:
+          name: Code Quality Report
+          script:
+            - echo "Generating code quality report..."
+            - npm run quality:report
+          artifacts:
+            - quality-report/**
+
+  tags:
+    'v*':
+      - step: *build-step
+      - parallel:
+          - step: *test-unit
+          - step: *test-integration
+          - step: *lint-step
+      - step:
+          name: Create Release
+          script:
+            - echo "Creating release artifacts..."
+            - npm run build:release
+            - tar -czf auto-dev-engine-${BITBUCKET_TAG}.tar.gz dist/
+          artifacts:
+            - auto-dev-engine-*.tar.gz
+      - step:
+          name: Publish Release
+          trigger: manual
+          script:
+            - echo "Publishing to npm..."
+            - npm publish
+      - step: *deploy-production
+
+  custom:
+    deploy-staging:
+      - step: *build-step
+      - step: *test-unit
+      - step: *deploy-staging
+    
+    deploy-production:
+      - step: *build-step
+      - parallel:
+          - step: *test-unit
+          - step: *test-integration
+      - step: *deploy-production
+    
+    security-scan:
+      - step: *build-step
+      - step: *security-audit
+      - step:
+          name: Deep Security Scan
+          script:
+            - echo "Running deep security scan..."
+            - npm run security:scan
+    
+    build-docker:
+      - step:
+          name: Build and Push Docker Image
+          services:
+            - docker
+          script:
+            - echo "Building Docker image..."
+            - export IMAGE_NAME=$BITBUCKET_REPO_OWNER/$BITBUCKET_REPO_SLUG
+            - docker build -t $IMAGE_NAME:$BITBUCKET_COMMIT -t $IMAGE_NAME:latest .
+            - echo "Pushing to Docker Hub..."
+            - echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USER --password-stdin
+            - docker push $IMAGE_NAME:$BITBUCKET_COMMIT
+            - docker push $IMAGE_NAME:latest
+
+# Advanced configuration options
+options:
+  max-time: 30
+  size: 2x
+
+clone:
+  depth: full

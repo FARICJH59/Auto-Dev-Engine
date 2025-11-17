@@ -1,0 +1,224 @@
+image: node:18
+
+stages:
+  - build
+  - test
+  - quality
+  - deploy
+
+variables:
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
+  DOCKER_DRIVER: overlay2
+  GIT_DEPTH: 0
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+    - .npm/
+
+# Build stage
+build:app:
+  stage: build
+  script:
+    - echo "Installing dependencies..."
+    - npm ci
+    - echo "Building application..."
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+      - node_modules/
+    expire_in: 1 day
+  only:
+    - branches
+    - tags
+    - merge_requests
+
+# Test stage
+test:unit:
+  stage: test
+  dependencies:
+    - build:app
+  script:
+    - echo "Running unit tests..."
+    - npm run test:unit
+  coverage: '/Statements\s*:\s*(\d+\.?\d*)%/'
+  artifacts:
+    reports:
+      junit: junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+  only:
+    - branches
+    - tags
+    - merge_requests
+
+test:integration:
+  stage: test
+  dependencies:
+    - build:app
+  script:
+    - echo "Running integration tests..."
+    - npm run test:integration
+  allow_failure: true
+  only:
+    - branches
+    - merge_requests
+
+test:e2e:
+  stage: test
+  dependencies:
+    - build:app
+  script:
+    - echo "Running end-to-end tests..."
+    - npm run test:e2e
+  allow_failure: true
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Quality stage
+quality:lint:
+  stage: quality
+  dependencies:
+    - build:app
+  script:
+    - echo "Running linter..."
+    - npm run lint
+  allow_failure: false
+  only:
+    - branches
+    - merge_requests
+
+quality:security:
+  stage: quality
+  dependencies:
+    - build:app
+  script:
+    - echo "Running security audit..."
+    - npm audit --audit-level=moderate
+  allow_failure: true
+  only:
+    - branches
+    - merge_requests
+
+quality:code-analysis:
+  stage: quality
+  dependencies:
+    - build:app
+  script:
+    - echo "Running code analysis..."
+    - npm run analyze
+  allow_failure: true
+  only:
+    - merge_requests
+
+# SAST security scanning
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+  - template: Security/License-Scanning.gitlab-ci.yml
+
+# Docker build
+build:docker:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - echo "Building Docker image..."
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA -t $CI_REGISTRY_IMAGE:latest .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+    - docker push $CI_REGISTRY_IMAGE:latest
+  only:
+    - main
+    - tags
+
+# Deploy stage
+deploy:staging:
+  stage: deploy
+  dependencies:
+    - build:app
+  script:
+    - echo "Deploying to staging environment..."
+    - npm run deploy:staging
+  environment:
+    name: staging
+    url: https://staging.example.com
+    on_stop: stop:staging
+  only:
+    - develop
+  when: on_success
+
+stop:staging:
+  stage: deploy
+  script:
+    - echo "Stopping staging environment..."
+  environment:
+    name: staging
+    action: stop
+  when: manual
+  only:
+    - develop
+
+deploy:production:
+  stage: deploy
+  dependencies:
+    - build:app
+  script:
+    - echo "Deploying to production environment..."
+    - npm run deploy:production
+  environment:
+    name: production
+    url: https://production.example.com
+  only:
+    - main
+    - tags
+  when: manual
+
+# Release job
+release:publish:
+  stage: deploy
+  script:
+    - echo "Publishing release..."
+    - npm publish
+  only:
+    - tags
+  when: manual
+
+# Pages deployment (for documentation)
+pages:
+  stage: deploy
+  dependencies:
+    - build:app
+  script:
+    - echo "Building documentation..."
+    - npm run docs:build
+    - mv docs/dist public
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
+  when: manual
+
+# Notification job
+notify:success:
+  stage: .post
+  script:
+    - echo "Pipeline completed successfully!"
+    - 'curl -X POST -H "Content-Type: application/json" -d "{\"status\":\"success\",\"pipeline\":\"$CI_PIPELINE_ID\"}" $WEBHOOK_URL'
+  when: on_success
+  allow_failure: true
+
+notify:failure:
+  stage: .post
+  script:
+    - echo "Pipeline failed!"
+    - 'curl -X POST -H "Content-Type: application/json" -d "{\"status\":\"failure\",\"pipeline\":\"$CI_PIPELINE_ID\"}" $WEBHOOK_URL'
+  when: on_failure
+  allow_failure: true
