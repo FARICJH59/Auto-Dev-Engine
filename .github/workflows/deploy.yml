@@ -1,0 +1,360 @@
+name: Vercel Deployment with DNS/SSL Validation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      skip_dns_check:
+        description: 'Skip DNS propagation check'
+        required: false
+        default: 'false'
+        type: boolean
+      skip_ssl_check:
+        description: 'Skip SSL readiness check'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  # Vercel's anycast IP for apex domains
+  VERCEL_A_RECORD: "76.76.21.21"
+  VERCEL_CNAME: "cname.vercel-dns.com"
+
+jobs:
+  validate-dns-ssl:
+    name: Validate DNS and SSL Configuration
+    runs-on: ubuntu-latest
+    outputs:
+      dns_ready: ${{ steps.dns-check.outputs.dns_ready }}
+      ssl_ready: ${{ steps.ssl-check.outputs.ssl_ready }}
+      domain: ${{ steps.get-domain.outputs.domain }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dnsutils openssl
+
+      - name: Get Vercel domain configuration
+        id: get-domain
+        run: |
+          echo "::group::Checking domain configuration"
+          
+          # Try to get domain from environment variable
+          if [ -n "${{ vars.VERCEL_DOMAIN }}" ]; then
+            DOMAIN="${{ vars.VERCEL_DOMAIN }}"
+            echo "Domain from environment variable: $DOMAIN"
+          # Try to get domain from vercel.json
+          elif [ -f "vercel.json" ]; then
+            DOMAIN=$(jq -r '.alias[0] // .name // empty' vercel.json 2>/dev/null || echo "")
+            if [ -z "$DOMAIN" ]; then
+              # Try alternative format
+              DOMAIN=$(jq -r '.domains[0] // empty' vercel.json 2>/dev/null || echo "")
+            fi
+            if [ -n "$DOMAIN" ]; then
+              echo "Domain from vercel.json: $DOMAIN"
+            fi
+          fi
+          
+          # Fallback - no domain configured
+          if [ -z "$DOMAIN" ]; then
+            echo "::warning::No custom domain configured. Using Vercel's auto-generated domain."
+            DOMAIN=""
+          fi
+          
+          echo "domain=$DOMAIN" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
+
+      - name: Check DNS propagation
+        id: dns-check
+        if: steps.get-domain.outputs.domain != ''
+        run: |
+          echo "::group::DNS Propagation Check"
+          
+          DOMAIN="${{ steps.get-domain.outputs.domain }}"
+          DNS_READY="true"
+          
+          echo "Checking DNS records for: $DOMAIN"
+          echo ""
+          
+          # Check A record for apex domain
+          echo "=== A Record Check ==="
+          A_RECORD=$(dig +short A "$DOMAIN" @8.8.8.8 2>/dev/null | head -1)
+          
+          if [ "$A_RECORD" = "$VERCEL_A_RECORD" ]; then
+            echo "✓ A record correctly points to Vercel: $A_RECORD"
+          elif [ -n "$A_RECORD" ]; then
+            echo "⚠ A record found but not pointing to Vercel: $A_RECORD"
+            echo "  Expected: $VERCEL_A_RECORD"
+            DNS_READY="false"
+          else
+            echo "✗ No A record found for $DOMAIN"
+            DNS_READY="false"
+          fi
+          
+          echo ""
+          echo "=== CNAME Check (www subdomain) ==="
+          CNAME_RECORD=$(dig +short CNAME "www.$DOMAIN" @8.8.8.8 2>/dev/null | head -1)
+          
+          if [[ "$CNAME_RECORD" == *"$VERCEL_CNAME"* ]] || [[ "$CNAME_RECORD" == *"vercel"* ]]; then
+            echo "✓ CNAME record correctly points to Vercel: $CNAME_RECORD"
+          elif [ -n "$CNAME_RECORD" ]; then
+            echo "⚠ CNAME record found but may not point to Vercel: $CNAME_RECORD"
+            # Don't fail on CNAME mismatch for www subdomain
+          else
+            echo "ℹ No CNAME record for www.$DOMAIN (optional)"
+          fi
+          
+          echo ""
+          
+          # Additional DNS servers check
+          echo "=== Multi-DNS Server Verification ==="
+          for DNS in 8.8.8.8 1.1.1.1 9.9.9.9; do
+            RESULT=$(dig +short A "$DOMAIN" @$DNS 2>/dev/null | head -1)
+            if [ "$RESULT" = "$VERCEL_A_RECORD" ]; then
+              echo "✓ $DNS: $RESULT"
+            elif [ -n "$RESULT" ]; then
+              echo "⚠ $DNS: $RESULT (not Vercel)"
+            else
+              echo "✗ $DNS: No response"
+            fi
+          done
+          
+          echo ""
+          echo "dns_ready=$DNS_READY" >> $GITHUB_OUTPUT
+          
+          if [ "$DNS_READY" = "false" ]; then
+            echo "::warning::DNS is not properly propagated to Vercel targets"
+          else
+            echo "DNS validation passed"
+          fi
+          
+          echo "::endgroup::"
+
+      - name: Check SSL readiness
+        id: ssl-check
+        if: steps.get-domain.outputs.domain != ''
+        run: |
+          echo "::group::SSL Readiness Check"
+          
+          DOMAIN="${{ steps.get-domain.outputs.domain }}"
+          SSL_READY="true"
+          
+          echo "Checking SSL certificate for: $DOMAIN"
+          echo ""
+          
+          # Try to connect with SSL
+          SSL_OUTPUT=$(echo | openssl s_client -connect "$DOMAIN:443" -servername "$DOMAIN" 2>/dev/null)
+          
+          if [ -z "$SSL_OUTPUT" ]; then
+            echo "⚠ Could not establish SSL connection to $DOMAIN"
+            echo "  This may indicate:"
+            echo "    - DNS not yet propagated"
+            echo "    - SSL certificate not yet issued"
+            echo "    - Domain not accessible"
+            SSL_READY="false"
+          else
+            # Check certificate validity
+            CERT_INFO=$(echo "$SSL_OUTPUT" | openssl x509 -noout -dates -issuer 2>/dev/null)
+            
+            if [ -n "$CERT_INFO" ]; then
+              echo "✓ SSL certificate is active"
+              echo ""
+              echo "Certificate Details:"
+              echo "$CERT_INFO"
+              
+              # Check if it's a Let's Encrypt certificate (Vercel uses LE)
+              if echo "$CERT_INFO" | grep -qi "Let's Encrypt\|R3\|E1"; then
+                echo ""
+                echo "✓ Certificate issued by Let's Encrypt (Vercel)"
+              fi
+              
+              # Check expiration
+              EXPIRY=$(echo "$SSL_OUTPUT" | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2)
+              if [ -n "$EXPIRY" ]; then
+                EXPIRY_EPOCH=$(date -d "$EXPIRY" +%s 2>/dev/null || echo "0")
+                NOW_EPOCH=$(date +%s)
+                DAYS_LEFT=$(( (EXPIRY_EPOCH - NOW_EPOCH) / 86400 ))
+                
+                if [ "$DAYS_LEFT" -lt 7 ]; then
+                  echo "⚠ Certificate expires in $DAYS_LEFT days"
+                else
+                  echo "✓ Certificate valid for $DAYS_LEFT days"
+                fi
+              fi
+            else
+              echo "⚠ Could not parse SSL certificate"
+              SSL_READY="false"
+            fi
+          fi
+          
+          echo ""
+          echo "ssl_ready=$SSL_READY" >> $GITHUB_OUTPUT
+          
+          if [ "$SSL_READY" = "false" ]; then
+            echo "::warning::SSL certificate is not ready"
+          else
+            echo "SSL validation passed"
+          fi
+          
+          echo "::endgroup::"
+
+      - name: Validation Summary
+        run: |
+          echo "::group::Validation Summary"
+          
+          DOMAIN="${{ steps.get-domain.outputs.domain }}"
+          DNS_READY="${{ steps.dns-check.outputs.dns_ready }}"
+          SSL_READY="${{ steps.ssl-check.outputs.ssl_ready }}"
+          
+          echo ""
+          echo "╔═══════════════════════════════════════════════════════════════╗"
+          echo "║                  DNS/SSL Validation Summary                   ║"
+          echo "╚═══════════════════════════════════════════════════════════════╝"
+          echo ""
+          
+          if [ -z "$DOMAIN" ]; then
+            echo "ℹ No custom domain configured"
+            echo "  Deployment will use Vercel's auto-generated domain"
+          else
+            echo "Domain: $DOMAIN"
+            echo ""
+            
+            if [ "$DNS_READY" = "true" ]; then
+              echo "✓ DNS: Propagated to Vercel targets"
+            else
+              echo "✗ DNS: NOT propagated to Vercel targets"
+            fi
+            
+            if [ "$SSL_READY" = "true" ]; then
+              echo "✓ SSL: Certificate is active and valid"
+            else
+              echo "✗ SSL: Certificate not ready"
+            fi
+          fi
+          
+          echo ""
+          echo "::endgroup::"
+
+  deploy:
+    name: Deploy to Vercel
+    needs: validate-dns-ssl
+    runs-on: ubuntu-latest
+    # Block deployment if DNS/SSL not ready (unless skipped via workflow_dispatch)
+    if: |
+      always() && 
+      (needs.validate-dns-ssl.outputs.domain == '' ||
+       (needs.validate-dns-ssl.outputs.dns_ready == 'true' && needs.validate-dns-ssl.outputs.ssl_ready == 'true') ||
+       github.event.inputs.skip_dns_check == 'true' ||
+       github.event.inputs.skip_ssl_check == 'true')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel
+        id: deploy
+        run: |
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $DEPLOYMENT_URL"
+
+      - name: Deployment Summary
+        run: |
+          echo "::group::Deployment Summary"
+          echo ""
+          echo "╔═══════════════════════════════════════════════════════════════╗"
+          echo "║                    Deployment Complete                        ║"
+          echo "╚═══════════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "Deployment URL: ${{ steps.deploy.outputs.deployment_url }}"
+          
+          if [ -n "${{ needs.validate-dns-ssl.outputs.domain }}" ]; then
+            echo "Custom Domain: https://${{ needs.validate-dns-ssl.outputs.domain }}"
+          fi
+          
+          echo ""
+          echo "::endgroup::"
+
+  notify-dns-ssl-issues:
+    name: Notify DNS/SSL Issues
+    needs: validate-dns-ssl
+    runs-on: ubuntu-latest
+    if: |
+      needs.validate-dns-ssl.outputs.domain != '' &&
+      (needs.validate-dns-ssl.outputs.dns_ready != 'true' || needs.validate-dns-ssl.outputs.ssl_ready != 'true')
+    
+    steps:
+      - name: Create Issue Body
+        id: issue-body
+        run: |
+          DOMAIN="${{ needs.validate-dns-ssl.outputs.domain }}"
+          DNS_READY="${{ needs.validate-dns-ssl.outputs.dns_ready }}"
+          SSL_READY="${{ needs.validate-dns-ssl.outputs.ssl_ready }}"
+          
+          BODY="## DNS/SSL Configuration Issues Detected\n\n"
+          BODY+="The deployment workflow detected issues with the domain configuration.\n\n"
+          BODY+="**Domain:** \`$DOMAIN\`\n\n"
+          BODY+="### Status\n\n"
+          
+          if [ "$DNS_READY" != "true" ]; then
+            BODY+="- ❌ **DNS**: Not propagated to Vercel targets (expected: \`76.76.21.21\`)\n"
+          else
+            BODY+="- ✅ **DNS**: Properly configured\n"
+          fi
+          
+          if [ "$SSL_READY" != "true" ]; then
+            BODY+="- ❌ **SSL**: Certificate not ready\n"
+          else
+            BODY+="- ✅ **SSL**: Certificate is active\n"
+          fi
+          
+          BODY+="\n### Required Actions\n\n"
+          BODY+="1. Verify DNS records are correctly configured:\n"
+          BODY+="   - A record: \`@ -> 76.76.21.21\`\n"
+          BODY+="   - CNAME record: \`www -> cname.vercel-dns.com\`\n"
+          BODY+="2. Wait for DNS propagation (can take up to 48 hours)\n"
+          BODY+="3. Vercel will automatically issue SSL certificate once DNS is ready\n\n"
+          BODY+="### Debugging Commands\n\n"
+          BODY+="\`\`\`bash\n"
+          BODY+="dig +short $DOMAIN\n"
+          BODY+="dig +short www.$DOMAIN\n"
+          BODY+="openssl s_client -connect $DOMAIN:443 -servername $DOMAIN </dev/null 2>/dev/null | openssl x509 -noout -dates\n"
+          BODY+="\`\`\`\n"
+          
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Report Issue
+        run: |
+          echo "::warning::DNS/SSL issues detected for ${{ needs.validate-dns-ssl.outputs.domain }}"
+          echo "${{ steps.issue-body.outputs.body }}"
