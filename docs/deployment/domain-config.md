@@ -393,4 +393,4 @@ dig +short <domain>       # Quick DNS check
 
 ---
 
-*Last updated: 2024*
+*Last updated: November 2024*

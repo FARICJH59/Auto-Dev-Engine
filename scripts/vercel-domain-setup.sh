@@ -117,14 +117,16 @@ add_domain() {
     
     log_info "Adding domain '$domain' to project '$project'..."
     
-    if vercel domains add "$domain" --project "$project" 2>&1; then
+    local output
+    if output=$(vercel domains add "$domain" --project "$project" 2>&1); then
         log_success "Domain added successfully"
     else
-        local status=$?
-        if [ $status -eq 0 ]; then
+        # Check if domain already exists (common case)
+        if echo "$output" | grep -qi "already\|exists\|configured"; then
             log_success "Domain is already configured"
         else
             log_warn "There may have been an issue adding the domain. Checking status..."
+            echo "$output"
         fi
     fi
 }
@@ -215,7 +217,8 @@ test_propagation() {
     fi
 }
 
-# Wait for DNS propagation with timeout
+# Wait for DNS propagation with timeout (optional - use with --wait flag)
+# This function is provided for scripted use cases where waiting is desired
 wait_for_propagation() {
     local domain=$1
     local elapsed=0

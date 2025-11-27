@@ -47,7 +47,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y dnsutils openssl
+          sudo apt-get install -y dnsutils openssl jq
 
       - name: Get Vercel domain configuration
         id: get-domain
@@ -259,8 +259,9 @@ jobs:
       always() && 
       (needs.validate-dns-ssl.outputs.domain == '' ||
        (needs.validate-dns-ssl.outputs.dns_ready == 'true' && needs.validate-dns-ssl.outputs.ssl_ready == 'true') ||
-       github.event.inputs.skip_dns_check == 'true' ||
-       github.event.inputs.skip_ssl_check == 'true')
+       (github.event.inputs.skip_dns_check == 'true' && github.event.inputs.skip_ssl_check == 'true') ||
+       (github.event.inputs.skip_dns_check == 'true' && needs.validate-dns-ssl.outputs.ssl_ready == 'true') ||
+       (github.event.inputs.skip_ssl_check == 'true' && needs.validate-dns-ssl.outputs.dns_ready == 'true'))
     
     steps:
       - name: Checkout repository
