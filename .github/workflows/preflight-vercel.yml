@@ -81,8 +81,7 @@ jobs:
           echo "Checking if domain '$DOMAIN' is configured in Vercel..."
           
           # Check if domain exists (idempotent operation)
-          # Using VERCEL_TOKEN env var to avoid exposing token in process list
-          export VERCEL_TOKEN="${{ secrets.VERCEL_TOKEN }}"
+          # VERCEL_TOKEN is set at workflow level via env
           DOMAIN_INFO=$(vercel domains inspect "$DOMAIN" 2>&1 || echo "NOT_FOUND")
           
           if echo "$DOMAIN_INFO" | grep -q "NOT_FOUND\|not found\|Error"; then

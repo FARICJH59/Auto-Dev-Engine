@@ -11,13 +11,31 @@
 
 set -e
 
-# Domain validation regex - allows standard domain name format
-DOMAIN_REGEX='^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'
-
 # Validate domain format to prevent command injection
+# Simple validation: alphanumeric, hyphens, dots, reasonable length
 validate_domain() {
     local domain=$1
-    if [[ ! "$domain" =~ $DOMAIN_REGEX ]]; then
+    
+    # Check length first to prevent ReDoS
+    if [ ${#domain} -gt 253 ] || [ ${#domain} -lt 3 ]; then
+        log_error "Invalid domain length: $domain"
+        exit 1
+    fi
+    
+    # Check for valid domain characters only
+    if [[ ! "$domain" =~ ^[a-zA-Z0-9.-]+$ ]]; then
+        log_error "Invalid domain characters: $domain"
+        exit 1
+    fi
+    
+    # Check that domain contains at least one dot
+    if [[ ! "$domain" =~ \. ]]; then
+        log_error "Invalid domain format (no TLD): $domain"
+        exit 1
+    fi
+    
+    # Check that domain doesn't start or end with hyphen or dot
+    if [[ "$domain" =~ ^[-.]|[-.]$ ]]; then
         log_error "Invalid domain format: $domain"
         exit 1
     fi
@@ -258,9 +276,9 @@ confirm_ssl() {
     log_info "Checking SSL certificate for '$domain'..."
     echo ""
     
-    # Check if SSL is active using openssl
+    # Check if SSL is active using openssl with timeout to prevent hanging
     local ssl_output
-    ssl_output=$(echo | openssl s_client -connect "$domain:443" -servername "$domain" 2>/dev/null)
+    ssl_output=$(timeout 15s bash -c "echo | openssl s_client -connect '$domain:443' -servername '$domain' 2>/dev/null" || echo "")
     
     if [ -z "$ssl_output" ]; then
         log_warn "Could not connect to $domain:443. SSL may not be ready yet."
