@@ -1,0 +1,289 @@
+name: Vercel Domain Preflight
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: 'Domain to check (optional, uses VERCEL_DOMAIN if not provided)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  VERCEL_A_RECORD: "76.76.21.21"
+  VERCEL_CNAME: "cname.vercel-dns.com"
+
+jobs:
+  preflight-checks:
+    name: Domain Preflight Checks
+    runs-on: ubuntu-latest
+    outputs:
+      domain: ${{ steps.get-domain.outputs.domain }}
+      domain_added: ${{ steps.add-domain.outputs.added }}
+      dns_propagated: ${{ steps.dns-check.outputs.propagated }}
+      ssl_ready: ${{ steps.ssl-check.outputs.ready }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dnsutils openssl jq
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Determine domain
+        id: get-domain
+        run: |
+          # Priority: workflow input > env var > vercel.json
+          if [ -n "${{ github.event.inputs.domain }}" ]; then
+            DOMAIN="${{ github.event.inputs.domain }}"
+            echo "Using domain from workflow input: $DOMAIN"
+          elif [ -n "${{ vars.VERCEL_DOMAIN }}" ]; then
+            DOMAIN="${{ vars.VERCEL_DOMAIN }}"
+            echo "Using domain from repository variable: $DOMAIN"
+          elif [ -f "vercel.json" ]; then
+            DOMAIN=$(jq -r '.alias[0] // .domains[0] // .name // empty' vercel.json 2>/dev/null || echo "")
+            if [ -n "$DOMAIN" ]; then
+              echo "Using domain from vercel.json: $DOMAIN"
+            fi
+          fi
+          
+          if [ -z "$DOMAIN" ]; then
+            echo "::warning::No domain configured. Skipping domain preflight checks."
+            echo "domain=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "domain=$DOMAIN" >> $GITHUB_OUTPUT
+
+      - name: Add/Check domain in Vercel
+        id: add-domain
+        if: steps.get-domain.outputs.domain != ''
+        run: |
+          DOMAIN="${{ steps.get-domain.outputs.domain }}"
+          
+          echo "Checking if domain '$DOMAIN' is configured in Vercel..."
+          
+          # Check if domain exists (idempotent operation)
+          # VERCEL_TOKEN is set at workflow level via env
+          DOMAIN_INFO=$(vercel domains inspect "$DOMAIN" 2>&1 || echo "NOT_FOUND")
+          
+          if echo "$DOMAIN_INFO" | grep -q "NOT_FOUND\|not found\|Error"; then
+            echo "Domain not found in Vercel. Attempting to add..."
+            
+            # Try to add the domain (idempotent - will succeed if already exists)
+            if vercel domains add "$DOMAIN" 2>&1; then
+              echo "Domain added successfully"
+              echo "added=true" >> $GITHUB_OUTPUT
+            else
+              echo "::warning::Could not add domain. It may already be configured or require verification."
+              echo "added=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "Domain is already configured in Vercel"
+            echo "added=existing" >> $GITHUB_OUTPUT
+            echo ""
+            echo "Domain Info:"
+            echo "$DOMAIN_INFO"
+          fi
+
+      - name: Check DNS propagation
+        id: dns-check
+        if: steps.get-domain.outputs.domain != ''
+        run: |
+          DOMAIN="${{ steps.get-domain.outputs.domain }}"
+          PROPAGATED="true"
+          
+          echo "╔═══════════════════════════════════════════════════════════════╗"
+          echo "║                    DNS Propagation Check                      ║"
+          echo "╚═══════════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "Checking DNS for: $DOMAIN"
+          echo ""
+          
+          # Check A record against multiple DNS servers
+          DNS_SERVERS=("8.8.8.8" "1.1.1.1" "9.9.9.9" "208.67.222.222")
+          PASSED=0
+          TOTAL=${#DNS_SERVERS[@]}
+          
+          echo "=== A Record Check (expecting $VERCEL_A_RECORD) ==="
+          for DNS in "${DNS_SERVERS[@]}"; do
+            RESULT=$(dig +short A "$DOMAIN" @$DNS 2>/dev/null | head -1)
+            if [ "$RESULT" = "$VERCEL_A_RECORD" ]; then
+              echo "✓ $DNS: $RESULT"
+              ((PASSED++))
+            elif [ -n "$RESULT" ]; then
+              echo "✗ $DNS: $RESULT (expected: $VERCEL_A_RECORD)"
+            else
+              echo "✗ $DNS: No response"
+            fi
+          done
+          
+          echo ""
+          echo "Results: $PASSED/$TOTAL DNS servers returned correct A record"
+          
+          if [ $PASSED -lt 2 ]; then
+            PROPAGATED="false"
+            echo "::warning::DNS is not fully propagated"
+          else
+            echo "DNS propagation check passed"
+          fi
+          
+          # Check CNAME for www subdomain
+          echo ""
+          echo "=== WWW Subdomain CNAME Check ==="
+          WWW_RESULT=$(dig +short CNAME "www.$DOMAIN" @8.8.8.8 2>/dev/null | head -1)
+          if [[ "$WWW_RESULT" == *"$VERCEL_CNAME"* ]] || [[ "$WWW_RESULT" == *"vercel"* ]]; then
+            echo "✓ www.$DOMAIN -> $WWW_RESULT"
+          elif [ -n "$WWW_RESULT" ]; then
+            echo "ℹ www.$DOMAIN -> $WWW_RESULT (not Vercel CNAME)"
+          else
+            echo "ℹ www.$DOMAIN: No CNAME record (optional)"
+          fi
+          
+          echo ""
+          echo "propagated=$PROPAGATED" >> $GITHUB_OUTPUT
+
+      - name: Check SSL readiness
+        id: ssl-check
+        if: steps.get-domain.outputs.domain != ''
+        run: |
+          DOMAIN="${{ steps.get-domain.outputs.domain }}"
+          SSL_READY="false"
+          
+          echo "╔═══════════════════════════════════════════════════════════════╗"
+          echo "║                      SSL Readiness Check                      ║"
+          echo "╚═══════════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "Checking SSL certificate for: $DOMAIN"
+          echo ""
+          
+          # Attempt SSL connection
+          SSL_OUTPUT=$(echo | openssl s_client -connect "$DOMAIN:443" -servername "$DOMAIN" 2>/dev/null || echo "")
+          
+          if [ -z "$SSL_OUTPUT" ]; then
+            echo "✗ Could not establish SSL connection"
+            echo "  Possible reasons:"
+            echo "    - DNS not yet propagated"
+            echo "    - SSL certificate not yet issued"
+            echo "    - Domain not reachable"
+          else
+            # Parse certificate information
+            CERT_SUBJECT=$(echo "$SSL_OUTPUT" | openssl x509 -noout -subject 2>/dev/null || echo "")
+            CERT_ISSUER=$(echo "$SSL_OUTPUT" | openssl x509 -noout -issuer 2>/dev/null || echo "")
+            CERT_DATES=$(echo "$SSL_OUTPUT" | openssl x509 -noout -dates 2>/dev/null || echo "")
+            
+            if [ -n "$CERT_SUBJECT" ]; then
+              SSL_READY="true"
+              echo "✓ SSL certificate is active"
+              echo ""
+              echo "Certificate Details:"
+              echo "  $CERT_SUBJECT"
+              echo "  $CERT_ISSUER"
+              echo "  $CERT_DATES"
+              
+              # Check if Let's Encrypt (Vercel's CA)
+              if echo "$CERT_ISSUER" | grep -qi "Let's Encrypt\|R3\|E1"; then
+                echo ""
+                echo "✓ Certificate issued by Let's Encrypt (Vercel)"
+              fi
+            else
+              echo "✗ Could not parse SSL certificate"
+            fi
+          fi
+          
+          echo ""
+          echo "ready=$SSL_READY" >> $GITHUB_OUTPUT
+
+      - name: Preflight Summary
+        if: steps.get-domain.outputs.domain != ''
+        run: |
+          DOMAIN="${{ steps.get-domain.outputs.domain }}"
+          DNS_PROPAGATED="${{ steps.dns-check.outputs.propagated }}"
+          SSL_READY="${{ steps.ssl-check.outputs.ready }}"
+          
+          echo ""
+          echo "╔═══════════════════════════════════════════════════════════════╗"
+          echo "║                    Preflight Check Summary                    ║"
+          echo "╚═══════════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "Domain: $DOMAIN"
+          echo ""
+          
+          # Determine overall status
+          if [ "$DNS_PROPAGATED" = "true" ] && [ "$SSL_READY" = "true" ]; then
+            echo "✅ All preflight checks PASSED"
+            echo ""
+            echo "Status:"
+            echo "  ✓ DNS: Propagated to Vercel (76.76.21.21)"
+            echo "  ✓ SSL: Certificate is active and valid"
+            echo ""
+            echo "The domain is ready for deployment!"
+          else
+            echo "⚠️ Some preflight checks need attention"
+            echo ""
+            echo "Status:"
+            
+            if [ "$DNS_PROPAGATED" = "true" ]; then
+              echo "  ✓ DNS: Propagated to Vercel (76.76.21.21)"
+            else
+              echo "  ✗ DNS: Not propagated to Vercel targets"
+              echo "        Configure A record: @ -> 76.76.21.21"
+            fi
+            
+            if [ "$SSL_READY" = "true" ]; then
+              echo "  ✓ SSL: Certificate is active and valid"
+            else
+              echo "  ✗ SSL: Certificate not ready"
+              echo "        SSL will be auto-issued once DNS propagates"
+            fi
+            
+            echo ""
+            echo "Required Actions:"
+            echo "  1. Ensure DNS A record points to 76.76.21.21"
+            echo "  2. Wait for DNS propagation (up to 48 hours)"
+            echo "  3. Vercel will automatically issue SSL certificate"
+          fi
+          echo ""
+
+  preflight-gate:
+    name: Preflight Gate
+    needs: preflight-checks
+    runs-on: ubuntu-latest
+    if: needs.preflight-checks.outputs.domain != ''
+    
+    steps:
+      - name: Evaluate preflight results
+        run: |
+          DNS_OK="${{ needs.preflight-checks.outputs.dns_propagated }}"
+          SSL_OK="${{ needs.preflight-checks.outputs.ssl_ready }}"
+          
+          if [ "$DNS_OK" = "true" ] && [ "$SSL_OK" = "true" ]; then
+            echo "✅ Domain preflight checks passed - deployment can proceed"
+            exit 0
+          else
+            echo "⚠️ Domain preflight checks indicate issues"
+            echo ""
+            echo "DNS Propagated: $DNS_OK"
+            echo "SSL Ready: $SSL_OK"
+            echo ""
+            echo "Deployment will still proceed, but the custom domain may not be fully functional."
+            echo "Monitor the domain status and wait for DNS/SSL to be ready."
+            exit 0  # Don't fail the workflow, just warn
+          fi
