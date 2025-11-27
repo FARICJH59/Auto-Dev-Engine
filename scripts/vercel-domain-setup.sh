@@ -11,6 +11,18 @@
 
 set -e
 
+# Domain validation regex - allows standard domain name format
+DOMAIN_REGEX='^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'
+
+# Validate domain format to prevent command injection
+validate_domain() {
+    local domain=$1
+    if [[ ! "$domain" =~ $DOMAIN_REGEX ]]; then
+        log_error "Invalid domain format: $domain"
+        exit 1
+    fi
+}
+
 # Configuration
 DEFAULT_PROJECT="rugged-silo"
 VERCEL_A_RECORD="76.76.21.21"
@@ -303,6 +315,9 @@ main() {
     
     local domain=$1
     local project=${2:-$DEFAULT_PROJECT}
+    
+    # Validate domain format before proceeding
+    validate_domain "$domain"
     
     log_info "Domain: $domain"
     log_info "Project: $project"

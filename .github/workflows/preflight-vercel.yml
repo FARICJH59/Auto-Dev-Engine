@@ -81,13 +81,15 @@ jobs:
           echo "Checking if domain '$DOMAIN' is configured in Vercel..."
           
           # Check if domain exists (idempotent operation)
-          DOMAIN_INFO=$(vercel domains inspect "$DOMAIN" --token=${{ secrets.VERCEL_TOKEN }} 2>&1 || echo "NOT_FOUND")
+          # Using VERCEL_TOKEN env var to avoid exposing token in process list
+          export VERCEL_TOKEN="${{ secrets.VERCEL_TOKEN }}"
+          DOMAIN_INFO=$(vercel domains inspect "$DOMAIN" 2>&1 || echo "NOT_FOUND")
           
           if echo "$DOMAIN_INFO" | grep -q "NOT_FOUND\|not found\|Error"; then
             echo "Domain not found in Vercel. Attempting to add..."
             
             # Try to add the domain (idempotent - will succeed if already exists)
-            if vercel domains add "$DOMAIN" --token=${{ secrets.VERCEL_TOKEN }} 2>&1; then
+            if vercel domains add "$DOMAIN" 2>&1; then
               echo "Domain added successfully"
               echo "added=true" >> $GITHUB_OUTPUT
             else
