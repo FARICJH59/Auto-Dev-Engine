@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "name": "auto-dev-engine",
+  "projectId": "auto-dev-engine-2qxj",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.js"
+    }
+  ],
+  "env": {
+    "VERCEL_TOKEN": "@vercel-token",
+    "VERCEL_PROJECT": "@vercel-project",
+    "VERCEL_DOMAIN": "@vercel-domain",
+    "GCP_PROJECT": "@gcp-project"
+  }
+}
