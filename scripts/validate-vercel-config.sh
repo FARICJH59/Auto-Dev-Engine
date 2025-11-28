@@ -8,18 +8,14 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# Color codes for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Source shared utilities
+source "$SCRIPT_DIR/vercel-utils.sh"
 
 ERRORS=0
 WARNINGS=0
 
 log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    vercel_log_info "$1"
 }
 
 log_success() {
@@ -36,13 +32,6 @@ log_error() {
     ERRORS=$((ERRORS + 1))
 }
 
-# Extract JSON values using basic shell tools
-extract_json_value() {
-    local file="$1"
-    local key="$2"
-    grep -o "\"$key\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$file" 2>/dev/null | head -1 | cut -d'"' -f4
-}
-
 # Validate vercel.json exists and has required fields
 validate_vercel_json() {
     local vercel_json="$PROJECT_ROOT/vercel.json"
@@ -54,9 +43,9 @@ validate_vercel_json() {
         return 1
     fi
     
-    # Check for valid JSON (basic check)
-    if ! grep -q "^{" "$vercel_json"; then
-        log_error "vercel.json does not appear to be valid JSON"
+    # Use shared utility for JSON validation
+    if ! validate_json_file "$vercel_json"; then
+        log_error "vercel.json is not valid JSON"
         return 1
     fi
     
