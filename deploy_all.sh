@@ -22,6 +22,7 @@ else
     vercel_log_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
     vercel_log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
     
+    # Extract JSON string values (fallback for string values like projectId, orgId)
     extract_json_value() {
         local file="$1"
         local key="$2"

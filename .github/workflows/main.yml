@@ -15,7 +15,6 @@ jobs:
         run: chmod +x scripts/*.sh
       - name: Validate Vercel configuration
         run: ./scripts/validate-vercel-config.sh
-        continue-on-error: true
 
   deploy:
     runs-on: ubuntu-latest

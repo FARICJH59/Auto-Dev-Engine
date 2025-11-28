@@ -26,8 +26,9 @@ vercel_log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Extract JSON values
+# Extract JSON string values
 # Uses jq if available, falls back to grep/cut with error handling
+# NOTE: This function is designed for string values only (like projectId, orgId)
 # Usage: extract_json_value <file> <key>
 extract_json_value() {
     local file="$1"
@@ -43,7 +44,7 @@ extract_json_value() {
         return $?
     fi
     
-    # Fallback to grep/cut with improved handling
+    # Fallback to grep/cut - only handles string values in quotes
     local value
     value=$(grep -o "\"$key\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$file" 2>/dev/null | head -1 | cut -d'"' -f4)
     echo "$value"
@@ -84,8 +85,9 @@ validate_json_file() {
     return 1
 }
 
-# Update JSON value in file
+# Update JSON string value in file
 # Uses jq if available, falls back to sed with backup
+# NOTE: This function is designed for string values only
 # Usage: update_json_value <file> <key> <value>
 update_json_value() {
     local file="$1"
@@ -96,10 +98,15 @@ update_json_value() {
         return 1
     fi
     
-    # Try jq first
+    # Escape special characters in value for safety
+    # Escape backslashes first, then quotes
+    local escaped_value
+    escaped_value=$(printf '%s' "$value" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    
+    # Try jq first (handles escaping automatically)
     if command -v jq &> /dev/null; then
         local temp_file=$(mktemp)
-        jq ".$key = \"$value\"" "$file" > "$temp_file" 2>/dev/null && mv "$temp_file" "$file"
+        jq --arg val "$value" ".$key = \$val" "$file" > "$temp_file" 2>/dev/null && mv "$temp_file" "$file"
         return $?
     fi
     
@@ -107,7 +114,8 @@ update_json_value() {
     local backup_file="${file}.bak"
     cp "$file" "$backup_file"
     
-    sed -i "s/\"$key\"[[:space:]]*:[[:space:]]*\"[^\"]*\"/\"$key\": \"$value\"/" "$file"
+    # Use escaped value in sed replacement
+    sed -i "s/\"$key\"[[:space:]]*:[[:space:]]*\"[^\"]*\"/\"$key\": \"$escaped_value\"/" "$file"
     
     # Verify the update was successful
     if validate_json_file "$file"; then
