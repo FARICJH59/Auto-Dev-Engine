@@ -1,0 +1,39 @@
+name: Rugged-Silo Autopilot
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - feature/rugged-silo-scripts
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Bootstrap environment
+        run: |
+          if [ -f .env ]; then
+            export $(grep -v '^#' .env | xargs)
+          fi
+        shell: bash
+
+      - name: Make scripts executable
+        run: chmod +x ./scripts/*.sh
+
+      - name: Run Autopilot
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT: ${{ secrets.VERCEL_PROJECT }}
+          VERCEL_DOMAIN: ${{ secrets.VERCEL_DOMAIN }}
+          GCP_PROJECT: ${{ secrets.GCP_PROJECT }}
+        run: ./scripts/autopilot.sh
