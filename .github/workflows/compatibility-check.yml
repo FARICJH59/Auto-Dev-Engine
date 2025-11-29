@@ -36,45 +36,13 @@ jobs:
       - name: Validate JSON manifest
         run: |
           echo "Validating compatibility-manifest.json..."
-          if command -v jq &> /dev/null; then
-            jq empty compatibility/compatibility-manifest.json
-            echo "✓ JSON is valid"
-          else
-            python3 -c "import json; json.load(open('compatibility/compatibility-manifest.json'))"
-            echo "✓ JSON is valid (validated with Python)"
-          fi
+          jq empty compatibility/compatibility-manifest.json
+          echo "✓ JSON is valid"
 
       - name: Run integrity check
         run: |
           chmod +x scripts/integrity-check.sh
           ./scripts/integrity-check.sh
-
-      - name: Check for Cloud Run modifications
-        run: |
-          echo "Checking for Cloud Run configuration changes..."
-          
-          # Get the list of changed files in this PR
-          CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null || echo "")
-          
-          # Check for Cloud Run patterns
-          CLOUD_RUN_DETECTED=false
-          for file in $CHANGED_FILES; do
-            if [[ "$file" =~ (cloudrun|cloud-run|service\.yaml|\.service\.yml) ]]; then
-              echo "⚠️ Potential Cloud Run config detected: $file"
-              CLOUD_RUN_DETECTED=true
-            fi
-          done
-          
-          if [ "$CLOUD_RUN_DETECTED" = true ]; then
-            echo ""
-            echo "⚠️ SAFE MODE WARNING: Cloud Run configurations detected."
-            echo "Please ensure changes follow SAFE MODE rules:"
-            echo "  1. No automatic overwriting of configs"
-            echo "  2. Only append or version new files"
-            echo "  3. All changes must be PR reviewed"
-          else
-            echo "✓ No Cloud Run configuration changes detected"
-          fi
 
       - name: Verify SAFE MODE is enabled
         run: |

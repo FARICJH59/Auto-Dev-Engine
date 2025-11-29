@@ -89,34 +89,19 @@ check_json_validity() {
 check_cloud_run_files() {
     log_info "Checking for Cloud Run configuration files in staged changes..."
     
-    # Patterns that indicate Cloud Run configurations
-    CLOUD_RUN_PATTERNS=(
-        "cloudrun*.yaml"
-        "cloudrun*.yml"
-        "service.yaml"
-        "cloud-run*.yaml"
-        "cloud-run*.yml"
-        "*.service.yaml"
-        "*.service.yml"
-        "run.googleapis.com"
-    )
-    
     # Check if we're in a git repository
     if [ -d "$REPO_ROOT/.git" ]; then
-        # Get list of changed files (staged and unstaged)
-        CHANGED_FILES=$(git -C "$REPO_ROOT" diff --name-only HEAD 2>/dev/null || echo "")
-        STAGED_FILES=$(git -C "$REPO_ROOT" diff --cached --name-only 2>/dev/null || echo "")
-        
-        ALL_CHANGES="$CHANGED_FILES $STAGED_FILES"
+        # Get list of changed files compared to HEAD (includes staged and unstaged)
+        # Using sort -u to deduplicate
+        ALL_CHANGES=$(git -C "$REPO_ROOT" diff --name-only HEAD 2>/dev/null | sort -u || echo "")
         
         CLOUD_RUN_FOUND=false
-        for pattern in "${CLOUD_RUN_PATTERNS[@]}"; do
-            for file in $ALL_CHANGES; do
-                if [[ "$file" == *"$pattern"* ]] || [[ "$file" =~ cloudrun|cloud-run|service\.yaml ]]; then
-                    log_warn "Detected potential Cloud Run config change: $file"
-                    CLOUD_RUN_FOUND=true
-                fi
-            done
+        for file in $ALL_CHANGES; do
+            # Check if filename matches any Cloud Run pattern
+            if [[ "$file" =~ (cloudrun|cloud-run|service\.yaml|\.service\.yml) ]]; then
+                log_warn "Detected potential Cloud Run config change: $file"
+                CLOUD_RUN_FOUND=true
+            fi
         done
         
         if [ "$CLOUD_RUN_FOUND" = false ]; then
@@ -160,7 +145,7 @@ check_manifest_fields() {
             fi
         done
     elif command -v python3 &> /dev/null; then
-        python3 << EOF
+        PYTHON_RESULT=$(python3 << EOF
 import json
 import sys
 
@@ -172,6 +157,7 @@ required_paths = [
     ["cloudRun", "safeMode", "enabled"]
 ]
 
+exit_code = 0
 with open("$MANIFEST_PATH") as f:
     data = json.load(f)
 
@@ -184,9 +170,14 @@ for path in required_paths:
         print(f"PASS: {field_name}")
     except (KeyError, TypeError):
         print(f"FAIL: {field_name}")
-        sys.exit(1)
+        exit_code = 1
+
+sys.exit(exit_code)
 EOF
-        if [ $? -eq 0 ]; then
+        )
+        PYTHON_EXIT=$?
+        echo "$PYTHON_RESULT"
+        if [ $PYTHON_EXIT -eq 0 ]; then
             log_pass "All required fields present"
         else
             log_error "Missing required fields"
