@@ -2,8 +2,7 @@
   "repo": "FARICJH59/Auto-Dev-Engine",
   "preferred_vercel_project": "auto-dev-engine-2qxj",
   "alternate_vercel_projects": [
-    "auto-dev-engine-aoug",
-    "auto-dev-engine-2qxj"
+    "auto-dev-engine-aoug"
   ],
   "cloud_run_services": [
     "hospital-backend",

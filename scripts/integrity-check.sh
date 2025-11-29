@@ -22,7 +22,7 @@ if [ -f "$MANIFEST" ]; then
       info "Manifest JSON valid."
     fi
   else
-    warn "jq not installed — skipping manifest JSON validation."
+    warn "jq not installed - skipping manifest JSON validation."
   fi
 else
   warn "Manifest file missing: $MANIFEST"
