@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0",
+  "lastUpdated": "2025-11-29",
+  "project": {
+    "name": "Auto-Dev-Engine",
+    "repository": "FARICJH59/Auto-Dev-Engine",
+    "description": "Unified automation system integrating frontend, backend AI agents, and CI/CD pipelines"
+  },
+  "vercel": {
+    "primaryProjectId": "auto-dev-engine-2qxj",
+    "alternateProjectId": "auto-dev-engine-aoug",
+    "platform": "Vercel",
+    "deploymentType": "frontend"
+  },
+  "cloudRun": {
+    "platform": "Google Cloud Run",
+    "services": [
+      {
+        "name": "rugged-silo",
+        "type": "backend",
+        "aiModel": "Gemini 2.0/3",
+        "features": [
+          "agentic-workflow-automation",
+          "prompt-panel-execution",
+          "secure-revision-rollouts"
+        ]
+      }
+    ],
+    "safeMode": {
+      "enabled": true,
+      "rules": [
+        "no-automatic-overwriting",
+        "append-or-version-only",
+        "pr-review-required"
+      ]
+    }
+  },
+  "compatibility": {
+    "integrityScript": "scripts/integrity-check.sh",
+    "compatibilityWorkflow": ".github/workflows/compatibility-check.yml",
+    "manifestPath": "compatibility/compatibility-manifest.json"
+  },
+  "operators": {
+    "updateProcedure": [
+      "1. Fork or branch from main",
+      "2. Update compatibility-manifest.json with new values",
+      "3. Run scripts/integrity-check.sh locally",
+      "4. Create a pull request for review",
+      "5. Merge only after CI passes and PR is approved"
+    ],
+    "contacts": [],
+    "escalationPath": "Create issue in repository"
+  }
+}

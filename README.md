@@ -48,6 +48,42 @@ To get you started, we ran an Actions workflow in your new repository that, amon
 1. Type a commit message, select **Commit directly to the welcome-workflow branch** and click **Commit changes**.
 1. Wait about 20 seconds, then refresh this page (the one you're following instructions from). A separate Actions workflow in the repository (not the workflow you created) will run and will automatically replace the contents of this README file with instructions for the next step.
 
+---
+
+## Auto-Dev-Engine Architecture
+
+This repository implements the **Auto-Dev-Engine** system, a unified automation platform integrating:
+
+| Component | Platform | Purpose |
+|-----------|----------|---------|
+| **Auto-Dev-Engine (ADE)** | Vercel | Frontend deployment |
+| **Rugged-Silo** | Google Cloud Run | Backend AI agents (Gemini 2.0/3) |
+| **GitHub Actions** | GitHub | CI/CD pipelines & compatibility validation |
+
+### SAFE MODE
+
+All infrastructure changes follow **SAFE MODE** principles:
+- No automatic overwriting of Cloud Run configs
+- Only append or version new files
+- All changes must go through PR review
+
+### Key Files
+
+| Path | Description |
+|------|-------------|
+| `compatibility/compatibility-manifest.json` | Machine-readable compatibility contract |
+| `compatibility/README.compat.md` | Human-readable compatibility documentation |
+| `scripts/integrity-check.sh` | Safety and validation script |
+| `.github/workflows/compatibility-check.yml` | CI workflow for compatibility validation |
+
+### Running Integrity Check
+
+```bash
+./scripts/integrity-check.sh
+```
+
+For more details, see the [Compatibility Contract](./compatibility/README.compat.md).
+
 <footer>
 
 ---

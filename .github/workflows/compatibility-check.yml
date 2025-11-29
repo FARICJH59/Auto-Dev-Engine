@@ -1,0 +1,112 @@
+name: Compatibility Check
+
+# Runs on pull requests to ensure compatibility between
+# Auto-Dev-Engine, Rugged-Silo, and Vercel deployments
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'compatibility/**'
+      - 'scripts/**'
+      - '.github/workflows/compatibility-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  compatibility-check:
+    name: Validate Compatibility Contract
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate JSON manifest
+        run: |
+          echo "Validating compatibility-manifest.json..."
+          if command -v jq &> /dev/null; then
+            jq empty compatibility/compatibility-manifest.json
+            echo "✓ JSON is valid"
+          else
+            python3 -c "import json; json.load(open('compatibility/compatibility-manifest.json'))"
+            echo "✓ JSON is valid (validated with Python)"
+          fi
+
+      - name: Run integrity check
+        run: |
+          chmod +x scripts/integrity-check.sh
+          ./scripts/integrity-check.sh
+
+      - name: Check for Cloud Run modifications
+        run: |
+          echo "Checking for Cloud Run configuration changes..."
+          
+          # Get the list of changed files in this PR
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null || echo "")
+          
+          # Check for Cloud Run patterns
+          CLOUD_RUN_DETECTED=false
+          for file in $CHANGED_FILES; do
+            if [[ "$file" =~ (cloudrun|cloud-run|service\.yaml|\.service\.yml) ]]; then
+              echo "⚠️ Potential Cloud Run config detected: $file"
+              CLOUD_RUN_DETECTED=true
+            fi
+          done
+          
+          if [ "$CLOUD_RUN_DETECTED" = true ]; then
+            echo ""
+            echo "⚠️ SAFE MODE WARNING: Cloud Run configurations detected."
+            echo "Please ensure changes follow SAFE MODE rules:"
+            echo "  1. No automatic overwriting of configs"
+            echo "  2. Only append or version new files"
+            echo "  3. All changes must be PR reviewed"
+          else
+            echo "✓ No Cloud Run configuration changes detected"
+          fi
+
+      - name: Verify SAFE MODE is enabled
+        run: |
+          SAFE_MODE=$(jq -r '.cloudRun.safeMode.enabled' compatibility/compatibility-manifest.json)
+          if [ "$SAFE_MODE" != "true" ]; then
+            echo "❌ ERROR: SAFE MODE must be enabled in compatibility manifest"
+            exit 1
+          fi
+          echo "✓ SAFE MODE is enabled"
+
+      - name: Verify Vercel project IDs
+        run: |
+          PRIMARY_ID=$(jq -r '.vercel.primaryProjectId' compatibility/compatibility-manifest.json)
+          ALTERNATE_ID=$(jq -r '.vercel.alternateProjectId' compatibility/compatibility-manifest.json)
+          
+          if [ "$PRIMARY_ID" = "null" ] || [ -z "$PRIMARY_ID" ]; then
+            echo "❌ ERROR: Primary Vercel project ID is missing"
+            exit 1
+          fi
+          
+          echo "✓ Primary Vercel project ID: $PRIMARY_ID"
+          echo "✓ Alternate Vercel project ID: $ALTERNATE_ID"
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "============================================"
+          echo "Compatibility Check Summary"
+          echo "============================================"
+          echo "✓ JSON manifest is valid"
+          echo "✓ Integrity check passed"
+          echo "✓ SAFE MODE is enabled"
+          echo "✓ Vercel project IDs are configured"
+          echo ""
+          echo "All compatibility checks passed!"
