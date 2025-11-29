@@ -1,0 +1,80 @@
+name: Compatibility Check
+
+# Runs on pull requests to ensure compatibility between
+# Auto-Dev-Engine, Rugged-Silo, and Vercel deployments
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'compatibility/**'
+      - 'scripts/**'
+      - '.github/workflows/compatibility-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  compatibility-check:
+    name: Validate Compatibility Contract
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate JSON manifest
+        run: |
+          echo "Validating compatibility-manifest.json..."
+          jq empty compatibility/compatibility-manifest.json
+          echo "✓ JSON is valid"
+
+      - name: Run integrity check
+        run: |
+          chmod +x scripts/integrity-check.sh
+          ./scripts/integrity-check.sh
+
+      - name: Verify SAFE MODE is enabled
+        run: |
+          SAFE_MODE=$(jq -r '.cloudRun.safeMode.enabled' compatibility/compatibility-manifest.json)
+          if [ "$SAFE_MODE" != "true" ]; then
+            echo "❌ ERROR: SAFE MODE must be enabled in compatibility manifest"
+            exit 1
+          fi
+          echo "✓ SAFE MODE is enabled"
+
+      - name: Verify Vercel project IDs
+        run: |
+          PRIMARY_ID=$(jq -r '.vercel.primaryProjectId' compatibility/compatibility-manifest.json)
+          ALTERNATE_ID=$(jq -r '.vercel.alternateProjectId' compatibility/compatibility-manifest.json)
+          
+          if [ "$PRIMARY_ID" = "null" ] || [ -z "$PRIMARY_ID" ]; then
+            echo "❌ ERROR: Primary Vercel project ID is missing"
+            exit 1
+          fi
+          
+          echo "✓ Primary Vercel project ID: $PRIMARY_ID"
+          echo "✓ Alternate Vercel project ID: $ALTERNATE_ID"
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "============================================"
+          echo "Compatibility Check Summary"
+          echo "============================================"
+          echo "✓ JSON manifest is valid"
+          echo "✓ Integrity check passed"
+          echo "✓ SAFE MODE is enabled"
+          echo "✓ Vercel project IDs are configured"
+          echo ""
+          echo "All compatibility checks passed!"
