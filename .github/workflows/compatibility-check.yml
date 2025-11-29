@@ -1,0 +1,23 @@
+name: Compatibility Manifest Check
+
+on:
+  pull_request:
+    paths:
+      - 'compatibility/**'
+      - '.github/workflows/compatibility-check.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate manifest JSON (jq)
+        run: |
+          jq empty compatibility/compatibility-manifest.json
+          echo "Manifest JSON syntax ok"
+      - name: Run integrity-check
+        run: |
+          chmod +x scripts/integrity-check.sh || true
+          ./scripts/integrity-check.sh
