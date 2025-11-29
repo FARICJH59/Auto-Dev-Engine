@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "ai_assistants": {
+    "copilot": {
+      "enabled": true,
+      "instructions_file": ".github/copilot-instructions.md"
+    }
+  },
+  "safe_mode": {
+    "enabled": true,
+    "protected_paths": [
+      "deploy_all.sh",
+      ".github/workflows/main.yml"
+    ],
+    "protected_patterns": [
+      "**/cloudrun/**",
+      "**/deployment/**"
+    ]
+  },
+  "compatibility": {
+    "guardian_workflow": ".github/workflows/compatibility-guardian.yml"
+  }
+}

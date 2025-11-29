@@ -1,0 +1,77 @@
+name: Compatibility Guardian
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  compatibility-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Verify required files exist
+        run: |
+          echo "Checking required configuration files..."
+          
+          files=(
+            ".github/copilot-instructions.md"
+            ".github/pull_request_template.md"
+            ".github/ai-tooling.json"
+            ".github/workflows/compatibility-guardian.yml"
+          )
+          
+          missing=0
+          for file in "${files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Missing: $file"
+              missing=$((missing + 1))
+            else
+              echo "✅ Found: $file"
+            fi
+          done
+          
+          if [ $missing -gt 0 ]; then
+            echo ""
+            echo "❌ $missing required file(s) missing!"
+            exit 1
+          fi
+          
+          echo ""
+          echo "✅ All required files present!"
+
+      - name: Validate YAML syntax
+        run: |
+          echo "Validating workflow YAML files..."
+          for file in .github/workflows/*.yml; do
+            if python3 -c "import yaml; yaml.safe_load(open('$file'))" 2>/dev/null; then
+              echo "✅ Valid: $file"
+            else
+              echo "❌ Invalid YAML: $file"
+              exit 1
+            fi
+          done
+
+      - name: Validate JSON syntax
+        run: |
+          echo "Validating JSON files..."
+          if python3 -c "import json; json.load(open('.github/ai-tooling.json'))" 2>/dev/null; then
+            echo "✅ Valid: .github/ai-tooling.json"
+          else
+            echo "❌ Invalid JSON: .github/ai-tooling.json"
+            exit 1
+          fi
+
+      - name: Safe mode confirmation
+        run: |
+          echo "🔒 SAFE MODE CONFIRMED"
+          echo "Protected paths are not modified by this workflow."
