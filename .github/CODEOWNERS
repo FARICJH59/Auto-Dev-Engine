@@ -1,0 +1,6 @@
+# CODEOWNERS for compatibility files
+# Keep owners for compatibility artifacts to prevent accidental edits.
+# Require review from infra team for these files.
+# Format: <pattern> <owner>
+/compatibility/ @FARICJH59
+/scripts/integrity-check.sh @FARICJH59
