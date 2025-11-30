@@ -65,3 +65,14 @@ coverage/
 # Deployment #
 ##############
 .vercel
+# Node
+node_modules/
+frontend/node_modules/
+
+# Build output
+build/
+frontend/build/
+
+# Python cache
+__pycache__/
+*.pyc
