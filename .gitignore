@@ -1,3 +1,13 @@
+# Dependencies #
+################
+node_modules/
+
+# Build outputs #
+#################
+dist/
+build/
+*.tsbuildinfo
+
 # Compiled source #
 ###################
 *.com
@@ -26,6 +36,11 @@
 *.sql
 *.sqlite
 
+# Environment and config #
+##########################
+.env
+*.local
+
 # OS generated files #
 ######################
 .DS_Store
@@ -35,3 +50,18 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Editor files #
+################
+*.swp
+*.swo
+*.tmp
+*.backup
+
+# Test coverage #
+#################
+coverage/
+
+# Deployment #
+##############
+.vercel
