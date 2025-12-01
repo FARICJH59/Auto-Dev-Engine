@@ -1,0 +1,158 @@
+# Full CI/CD workflow: Node 20 -> tests -> build -> Docker image -> Cloud Run + Vercel deployments
+# Requirements (set these in repository secrets):
+# - GCP_PROJECT_ID, GCP_REGION, GCP_SA_KEY  (GCP service account JSON)
+# - VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+# - OPTIONAL: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN (if you also push to Docker Hub)
+name: CI / CD — Node 20 · Docker · Vercel & Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+      - 'release/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  test:
+    name: Lint, install & unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            node_modules
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ env.NODE_VERSION }}-
+      - run: npm ci
+      - run: |
+          if npm run | Select-String "lint" { npm run lint --if-present }
+      - run: npm test --if-present
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ github.run_id }}
+          path: |
+            test-results || ./test-results || coverage || ./coverage || /tmp/test-results || ./
+
+  build:
+    name: Build (production)
+    runs-on: ubuntu-latest
+    needs: test
+    outputs:
+      image-tag: ${{ steps.set-tag.outputs.image-tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm ci --ignore-scripts
+      - run: npm run build --if-present
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact
+          path: |
+            build
+            dist
+            .next
+            public
+            package.json
+      - id: set-tag
+        run: |
+          echo "image-tag=gcr.io/${{ secrets.GCP_PROJECT_ID }}/app:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+  docker-build-and-push:
+    name: Build & Push Docker image to GCR
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - run: gcloud auth configure-docker --quiet
+      - uses: docker/setup-buildx-action@v2
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      - uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: gcr.io/${{ secrets.GCP_PROJECT_ID }}/app:${{ github.sha }},gcr.io/${{ secrets.GCP_PROJECT_ID }}/app:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+      - id: image
+        run: echo "ref=gcr.io/${{ secrets.GCP_PROJECT_ID }}/app:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+  deploy-cloud-run:
+    name: Deploy to Cloud Run (Gemini-safe)
+    runs-on: ubuntu-latest
+    needs: docker-build-and-push
+    environment:
+      name: production
+    outputs:
+      cloud-run-url: ${{ steps.get-url.outputs.cloud-run-url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - run: |
+          curl -sSL https://sdk.cloud.google.com | bash >/dev/null
+          source $HOME/google-cloud-sdk/path.bash.inc
+          gcloud --version
+      - run: |
+          IMAGE=gcr.io/${{ secrets.GCP_PROJECT_ID }}/app:${{ github.sha }}
+          SERVICE=auto-dev-engine-service
+          REGION=${{ secrets.GCP_REGION }}
+          source $HOME/google-cloud-sdk/path.bash.inc || true
+          gcloud run deploy "$SERVICE" --image="$IMAGE" --region="$REGION" --platform=managed --allow-unauthenticated --quiet
+      - id: get-url
+        run: |
+          RUN_URL=$(gcloud run services describe auto-dev-engine-service --project=${{ secrets.GCP_PROJECT_ID }} --region=${{ secrets.GCP_REGION }} --format='value(status.url)')
+          echo "cloud-run-url=${RUN_URL}" >> $GITHUB_OUTPUT
+
+  deploy-vercel:
+    name: Deploy to Vercel (optional frontend)
+    runs-on: ubuntu-latest
+    needs: build
+    if: secrets.VERCEL_TOKEN != '' && secrets.VERCEL_PROJECT_ID != ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm install -g vercel
+      - run: vercel --prod --token ${{ secrets.VERCEL_TOKEN }} --confirm --org-id ${{ secrets.VERCEL_ORG_ID }} --project ${{ secrets.VERCEL_PROJECT_ID }}
+
+  notify:
+    name: Notify on finish
+    runs-on: ubuntu-latest
+    needs: [deploy-cloud-run, deploy-vercel]
+    if: always()
+    steps:
+      - run: |
+          echo "Run $GITHUB_RUN_NUMBER finished. Check jobs for details."
+          echo "Cloud Run URL: ${{ needs.deploy-cloud-run.outputs.cloud-run-url || 'see logs' }}"
