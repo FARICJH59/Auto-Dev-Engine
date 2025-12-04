@@ -1,0 +1,30 @@
+name: 'Lint'
+description: 'Run linting for the specified package'
+inputs:
+  package:
+    description: 'Package to lint (backend, frontend, services)'
+    required: true
+  node-version:
+    description: 'Node.js version to use'
+    required: false
+    default: '20'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: 'npm'
+        cache-dependency-path: ${{ inputs.package }}/package-lock.json
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.package }}
+      run: npm ci --ignore-scripts || npm install
+
+    - name: Run lint
+      shell: bash
+      working-directory: ${{ inputs.package }}
+      run: npm run lint --if-present
