@@ -29,7 +29,11 @@ describe('Frontend Smoke Tests', () => {
     it('should display the footer', () => {
       render(<App />);
       
-      expect(screen.getByText(/Auto-Dev-Engine/)).toBeInTheDocument();
+      // Use getAllByText since "Auto-Dev-Engine" appears multiple times
+      const elements = screen.getAllByText(/Auto-Dev-Engine/);
+      expect(elements.length).toBeGreaterThan(0);
+      // Specifically check for footer content
+      expect(screen.getByText(/© 2024/)).toBeInTheDocument();
     });
   });
 
