@@ -1,0 +1,30 @@
+{
+  "name": "auto-dev-engine",
+  "version": "1.0.0",
+  "description": "GitHub Actions tutorial with Vercel Speed Insights integration examples",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FARICJH59/Auto-Dev-Engine.git"
+  },
+  "keywords": [
+    "vercel",
+    "speed-insights",
+    "performance",
+    "web-vitals",
+    "github-actions"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/FARICJH59/Auto-Dev-Engine/issues"
+  },
+  "homepage": "https://github.com/FARICJH59/Auto-Dev-Engine#readme",
+  "dependencies": {
+    "@vercel/speed-insights": "^1.3.1"
+  }
+}

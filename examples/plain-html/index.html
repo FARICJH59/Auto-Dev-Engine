@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plain HTML with Vercel Speed Insights</title>
+</head>
+<body>
+    <h1>Plain HTML Example with Vercel Speed Insights</h1>
+    <p>This page demonstrates how to add Vercel Speed Insights to a plain HTML site.</p>
+    
+    <main>
+        <section>
+            <h2>About Speed Insights</h2>
+            <p>Vercel Speed Insights helps you track and analyze your website's performance metrics.</p>
+        </section>
+    </main>
+
+    <!-- Vercel Speed Insights Script -->
+    <!-- Add this script tag just before the closing </body> tag -->
+    <script>
+        window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+    </script>
+    <script defer src="https://cdn.vercel-insights.com/v1/speed-insights/script.js"></script>
+</body>
+</html>
