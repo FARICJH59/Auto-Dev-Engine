@@ -1,59 +1,247 @@
-<header>
+# ADE Fusion Stack
 
-# Hello GitHub Actions
+**Auto Dev Engine** - A performance-tuned, security-hardened microservices platform for automated development workflows.
 
-_Create and run a GitHub Actions workflow._
+## 🚀 Overview
 
-</header>
+The ADE Fusion Stack is a collection of TypeScript and Python services designed for high-performance automated development:
 
-## Step 1: Create a workflow file
+- **Project Generator** - Scaffolds new projects from templates
+- **Vision Agent** - Handles image and visual analysis tasks
+- **Inventory Agent** - Manages resources and inventory tracking
+- **Orchestrator** - Python FastAPI service coordinating all components
+- **UI** - Web interface for the platform
 
-_Welcome to "Hello GitHub Actions"! :wave:_
+## 📦 Package Management
 
-**What is _GitHub Actions_?**: GitHub Actions is a flexible way to automate nearly every aspect of your team's software workflow. You can automate testing, continuously deploy, review code, manage issues and pull requests, and much more. The best part, these workflows are stored as code in your repository and easily shared and reused across teams. To learn more, check out these resources:
+This project uses **pnpm workspaces** for efficient package management with shared dependencies.
 
-- The GitHub Actions feature page, see [GitHub Actions](https://github.com/features/actions).
-- The "GitHub Actions" user documentation, see [GitHub Actions](https://docs.github.com/actions).
+### Prerequisites
 
-**What is a _workflow_?**: A workflow is a configurable automated process that will run one or more jobs. Workflows are defined in special files in the `.github/workflows` directory and they execute based on your chosen event. For this exercise, we'll use a `pull_request` event.
+- Node.js >= 20.0.0
+- pnpm >= 9.0.0 (recommended)
+- Python >= 3.12 (for orchestrator)
 
-- To read more about workflows, jobs, and events, see "[Understanding GitHub Actions](https://docs.github.com/en/actions/learn-github-actions/understanding-github-actions)".
-- If you want to learn more about the `pull_request` event before using it, see "[pull_request](https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request)".
+### Installation
 
-To get you started, we ran an Actions workflow in your new repository that, among other things, created a branch for you to work in, called `welcome-workflow`.
+```bash
+# Install pnpm globally (if not installed)
+npm install -g pnpm
 
-### :keyboard: Activity: Create a workflow file
+# Install all dependencies
+pnpm install
 
-1. Open a new browser tab, and navigate to this same repository. Then, work on the steps in your second tab while you read the instructions in this tab.
-1. Create a pull request. This will contain all of the changes you'll make throughout this part of the course.
+# Or use npm fallback
+npm install --workspaces
+```
 
-   Click the **Pull Requests** tab, click **New pull request**, set `base: main` and `compare:welcome-workflow`, click **Create pull request**, then click **Create pull request** again.
+### Workspace Commands
 
-1. Navigate to the **Code** tab.
-1. From the **main** branch dropdown, click on the **welcome-workflow** branch.
-1. Navigate to the `.github/workflows/` folder, then select **Add file** and click on **Create new file**.
-1. In the **Name your file** field, enter `welcome.yml`.
-1. Add the following content to the `welcome.yml` file:
+```bash
+# Build all packages
+pnpm build
+# Or: pnpm -r run build
 
-   ```yaml copy
-   name: Post welcome comment
-   on:
-     pull_request:
-       types: [opened]
-   permissions:
-     pull-requests: write
-   ```
+# Build a specific package
+pnpm --filter @ade/shared-sdk build
+pnpm --filter @ade/project-generator build
 
-1. To commit your changes, click **Commit changes**.
-1. Type a commit message, select **Commit directly to the welcome-workflow branch** and click **Commit changes**.
-1. Wait about 20 seconds, then refresh this page (the one you're following instructions from). A separate Actions workflow in the repository (not the workflow you created) will run and will automatically replace the contents of this README file with instructions for the next step.
+# Run tests across all packages
+pnpm test
 
-<footer>
+# Lint all packages
+pnpm lint
 
----
+# Run security checks
+pnpm security-check
 
-Get help: [Post in our discussion board](https://github.com/orgs/skills/discussions/categories/hello-github-actions) &bull; [Review the GitHub status page](https://www.githubstatus.com/)
+# Clean all build artifacts
+pnpm clean
+```
 
-&copy; 2023 GitHub &bull; [Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/code_of_conduct.md) &bull; [MIT License](https://gh.io/mit)
+### npm Compatibility
 
-</footer>
+While pnpm is recommended, npm workspaces are also supported:
+
+```bash
+# Using npm
+npm run build:npm
+npm run lint:npm
+npm run test:npm
+npm run audit:npm
+```
+
+## 🏗️ Project Structure
+
+```
+├── services/
+│   ├── shared-sdk/          # Shared utilities and types
+│   ├── project-generator/   # Project scaffolding service
+│   ├── vision-agent/        # Image analysis service
+│   └── inventory-agent/     # Inventory management service
+├── ui/                      # Web interface
+├── orchestrator/            # Python FastAPI orchestrator
+├── scripts/
+│   └── security-check.sh    # Security validation script
+├── terraform/               # Infrastructure as Code
+│   ├── modules/
+│   │   ├── cloudrun/        # Cloud Run deployments
+│   │   ├── pubsub/          # Message queuing
+│   │   ├── firestore/       # Document database
+│   │   └── cloudsql/        # Relational database
+│   └── environments/        # Environment-specific configs
+├── pnpm-workspace.yaml      # pnpm workspace configuration
+└── package.json             # Root package.json
+```
+
+## 🐳 Docker Images
+
+All services use multi-stage Dockerfiles optimized for:
+
+### Node.js Services
+- **Build stage**: `node:22-slim` with pnpm for dependency management
+- **Runtime stage**: `gcr.io/distroless/nodejs22-debian12` (pinned by digest)
+- Benefits:
+  - Smaller image size (~70% reduction)
+  - Reduced attack surface (no shell, package managers, or OS utilities)
+  - Faster cold starts
+
+### Python Orchestrator
+- **Build stage**: `python:3.12-slim` with wheel caching
+- **Runtime stage**: `python:3.12-slim` with uvicorn workers
+- Benefits:
+  - Pre-built wheels for faster deployments
+  - Non-root user execution
+  - Multiple uvicorn workers for concurrency
+
+### Building Images
+
+```bash
+# Build Node.js service
+docker build -f services/project-generator/Dockerfile -t ade-project-generator .
+
+# Build Python orchestrator
+docker build -f orchestrator/Dockerfile -t ade-orchestrator .
+```
+
+## ☁️ Cloud Run Tuning
+
+Services are optimized for Google Cloud Run with these settings:
+
+| Service           | Concurrency | Min Instances | CPU Throttling |
+|-------------------|-------------|---------------|----------------|
+| project-generator | 250         | 0             | Yes            |
+| vision-agent      | 80          | 0             | No             |
+| inventory-agent   | 150         | 0             | Yes            |
+| ui                | 200         | 0             | Yes            |
+| orchestrator      | 100         | 0             | Yes            |
+
+### Performance Rationale
+
+- **Concurrency**: Set based on expected request patterns and resource requirements
+  - Vision agent uses lower concurrency due to memory-intensive operations
+  - Project generator can handle more concurrent requests with lighter workloads
+- **Min Instances 0**: Cost optimization for dev/staging; increase for production
+- **CPU Throttling**: Enabled where appropriate to reduce costs; disabled for CPU-intensive services
+
+## 🔐 Security
+
+### Rugged-Silo Security Model
+
+This project follows the Rugged-Silo security model:
+
+1. **Action Pinning**: All GitHub Actions are pinned by SHA digest on the main branch
+2. **Image Pinning**: Docker base images are pinned by digest
+3. **Security Checks**: Portable `security-check.sh` runs before builds
+4. **SBOM Generation**: CycloneDX SBOM generated for UI package
+5. **Audit Gating**: npm audit with `--audit-level=high` for UI
+
+### Running Security Checks
+
+```bash
+# Run security validation
+./scripts/security-check.sh
+
+# Generate SBOM (UI package)
+cd ui && pnpm sbom
+
+# Run npm audit
+pnpm audit --audit-level=high
+```
+
+## 🏭 CI/CD Pipeline
+
+The pipeline includes:
+
+1. **Security Check** - Node version validation, dependency audit
+2. **Matrix Build** - Parallel lint/test/build for all packages
+3. **SBOM Generation** - CycloneDX for supply chain security
+4. **Audit Gate** - npm audit with high severity threshold
+5. **Policy Gate** - Custom policy validation
+6. **Quota Gate** - Resource quota checks
+7. **CodeQL Analysis** - Static code analysis
+8. **Deploy** - Cloud Run deployment (gated by all checks)
+
+### Action Pinning Policy
+
+- **main branch**: All actions pinned by SHA digest
+- **dev/staging branches**: Version tags allowed
+- Automated check enforces pinning on merge to main
+
+## 📊 Terraform Infrastructure
+
+Deploy infrastructure using Terraform workspaces:
+
+```bash
+cd terraform
+
+# Initialize
+terraform init
+
+# Select workspace
+terraform workspace select dev  # or staging, prod
+
+# Plan
+terraform plan -var-file=environments/dev/terraform.tfvars
+
+# Apply
+terraform apply -var-file=environments/dev/terraform.tfvars
+```
+
+### Modules
+
+- **cloudrun**: Cloud Run service deployments with autoscaling
+- **pubsub**: Message queuing for inter-service communication
+- **firestore**: Document database for application data
+- **cloudsql**: PostgreSQL for relational data (optional)
+
+### Parallel Resource Creation
+
+Terraform is configured for parallel resource creation where safe, reducing deployment time.
+
+## 🧪 Development
+
+### Running Locally
+
+```bash
+# Start shared-sdk build in watch mode
+cd services/shared-sdk && pnpm build --watch
+
+# Start a service
+cd services/project-generator && pnpm dev
+
+# Start orchestrator
+cd orchestrator && uvicorn main:app --reload
+```
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | Service port | Service-specific |
+| `LOG_LEVEL` | Logging level | `info` |
+| `NODE_ENV` | Node environment | `development` |
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details.
