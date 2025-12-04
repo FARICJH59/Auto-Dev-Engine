@@ -114,7 +114,7 @@ service:
       exporters: [otlp, logging]
     
     metrics:
-      receivers: [otlp, prometheus]
+      receivers: [otlp, prometheus, awscloudwatch]
       processors: [memory_limiter, batch, resource, attributes]
       exporters: [prometheus, logging]
     

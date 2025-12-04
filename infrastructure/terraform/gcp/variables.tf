@@ -94,6 +94,12 @@ variable "function_min_instances" {
   default     = 1
 }
 
+variable "allow_unauthenticated" {
+  description = "Allow unauthenticated access to Cloud Function (set to false for production)"
+  type        = bool
+  default     = false
+}
+
 variable "cors_allowed_origins" {
   description = "Allowed origins for CORS"
   type        = list(string)

@@ -63,10 +63,11 @@ module "cache" {
 module "storage" {
   source = "../modules/storage"
 
-  project_name = var.project_name
-  environment  = var.environment
-  cloud        = "aws"
-  bucket_name  = var.bucket_name
+  project_name         = var.project_name
+  environment          = var.environment
+  cloud                = "aws"
+  bucket_name          = var.bucket_name
+  cors_allowed_origins = var.cors_allowed_origins
 }
 
 # Lambda Function

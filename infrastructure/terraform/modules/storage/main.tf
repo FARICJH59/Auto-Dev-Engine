@@ -16,6 +16,12 @@ variable "bucket_name" {
   type = string
 }
 
+variable "cors_allowed_origins" {
+  description = "Allowed origins for CORS. Use specific origins in production."
+  type        = list(string)
+  default     = []
+}
+
 # S3 Bucket
 resource "aws_s3_bucket" "main" {
   count  = var.cloud == "aws" ? 1 : 0
@@ -80,13 +86,13 @@ resource "aws_s3_bucket_lifecycle_configuration" "main" {
 }
 
 resource "aws_s3_bucket_cors_configuration" "main" {
-  count  = var.cloud == "aws" ? 1 : 0
+  count  = var.cloud == "aws" && length(var.cors_allowed_origins) > 0 ? 1 : 0
   bucket = aws_s3_bucket.main[0].id
 
   cors_rule {
-    allowed_headers = ["*"]
-    allowed_methods = ["GET", "HEAD", "PUT", "POST", "DELETE"]
-    allowed_origins = ["*"]
+    allowed_headers = ["Content-Type", "Authorization", "x-amz-date", "x-amz-content-sha256"]
+    allowed_methods = ["GET", "HEAD", "PUT"]
+    allowed_origins = var.cors_allowed_origins
     expose_headers  = ["ETag"]
     max_age_seconds = 3600
   }

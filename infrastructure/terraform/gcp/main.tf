@@ -287,7 +287,7 @@ resource "google_cloudfunctions2_function" "backend" {
 
 # Upload placeholder function source
 resource "google_storage_bucket_object" "function_source" {
-  name   = "function-source-${timestamp()}.zip"
+  name   = "function-source-${data.archive_file.function_placeholder.output_md5}.zip"
   bucket = google_storage_bucket.main.name
   source = data.archive_file.function_placeholder.output_path
 }
@@ -321,8 +321,11 @@ data "archive_file" "function_placeholder" {
   }
 }
 
-# Allow unauthenticated access (configure based on requirements)
+# IAM binding for Cloud Function invocation
+# Note: For production, replace with specific service accounts or authenticated users
+# Use "allUsers" only for public APIs with proper rate limiting and WAF protection
 resource "google_cloud_run_service_iam_member" "invoker" {
+  count    = var.allow_unauthenticated ? 1 : 0
   location = google_cloudfunctions2_function.backend.location
   service  = google_cloudfunctions2_function.backend.name
   role     = "roles/run.invoker"

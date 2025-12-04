@@ -72,7 +72,7 @@ variable "lambda_timeout" {
 }
 
 variable "cors_allowed_origins" {
-  description = "Allowed origins for CORS"
+  description = "Allowed origins for CORS. Specify explicitly for production."
   type        = list(string)
-  default     = ["*"]
+  default     = []
 }
