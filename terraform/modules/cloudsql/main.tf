@@ -34,6 +34,32 @@ variable "enable" {
   default     = false
 }
 
+variable "db_password" {
+  description = "Database user password. Must be provided - do not use defaults. In production, use Secret Manager."
+  type        = string
+  sensitive   = true
+  default     = null # No default - must be explicitly provided when enable=true
+
+  validation {
+    condition     = !var.enable || (var.enable && var.db_password != null && length(var.db_password) >= 16)
+    error_message = "When Cloud SQL is enabled, db_password must be provided and at least 16 characters long."
+  }
+}
+
+variable "authorized_networks" {
+  description = "List of authorized networks for Cloud SQL access. Only used for non-production environments."
+  type = list(object({
+    name = string
+    cidr = string
+  }))
+  default = []
+
+  validation {
+    condition     = alltrue([for net in var.authorized_networks : can(cidrhost(net.cidr, 0))])
+    error_message = "All authorized_networks entries must have valid CIDR notation."
+  }
+}
+
 # Local values
 locals {
   instance_name = "ade-postgres-${var.environment}"
@@ -68,13 +94,17 @@ resource "google_sql_database_instance" "instance" {
 
     # IP configuration
     ip_configuration {
-      ipv4_enabled    = true
-      private_network = null # Use public IP for simplicity
+      ipv4_enabled    = var.environment != "prod"
+      private_network = null # Configure VPC for production
 
-      # Authorized networks (restrict in production)
-      authorized_networks {
-        name  = "allow-all"
-        value = "0.0.0.0/0"
+      # Authorized networks - MUST be restricted in production
+      # This is only enabled for non-production environments
+      dynamic "authorized_networks" {
+        for_each = var.environment != "prod" && length(var.authorized_networks) > 0 ? var.authorized_networks : []
+        content {
+          name  = authorized_networks.value.name
+          value = authorized_networks.value.cidr
+        }
       }
     }
 
@@ -105,13 +135,16 @@ resource "google_sql_database" "database" {
   instance = google_sql_database_instance.instance[0].name
 }
 
-# Database user
+# Database user - password should be provided via variable or Secret Manager
 resource "google_sql_user" "users" {
   count = var.enable ? 1 : 0
 
   name     = "ade_app"
   instance = google_sql_database_instance.instance[0].name
-  password = "CHANGE_ME_IN_SECRET_MANAGER" # Use Secret Manager in production
+  
+  # Password must be provided via variable; do not use default
+  # In production, integrate with Secret Manager for rotation
+  password = var.db_password
 }
 
 # Outputs
