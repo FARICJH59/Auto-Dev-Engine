@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # ADE Fusion Stack Security Check Script
-# Portable security checks using Node semver for version validation
+# Portable security checks using Node for version validation
 #
 set -e
 
@@ -15,15 +15,16 @@ echo "========================================"
 echo "ADE Fusion Stack Security Check"
 echo "========================================"
 
-# Check Node.js version
-REQUIRED_NODE_VERSION="20.0.0"
+# Check Node.js version using Node itself for semver comparison
+REQUIRED_NODE_MAJOR=20
 CURRENT_NODE_VERSION=$(node -v | sed 's/v//')
+CURRENT_NODE_MAJOR=$(echo "$CURRENT_NODE_VERSION" | cut -d. -f1)
 
 echo -e "\n${YELLOW}Checking Node.js version...${NC}"
-if npx -y semver -r ">=${REQUIRED_NODE_VERSION}" "$CURRENT_NODE_VERSION" > /dev/null 2>&1; then
-    echo -e "${GREEN}✓ Node.js version ${CURRENT_NODE_VERSION} meets requirement (>=${REQUIRED_NODE_VERSION})${NC}"
+if [ "$CURRENT_NODE_MAJOR" -ge "$REQUIRED_NODE_MAJOR" ]; then
+    echo -e "${GREEN}✓ Node.js version ${CURRENT_NODE_VERSION} meets requirement (>=${REQUIRED_NODE_MAJOR}.0.0)${NC}"
 else
-    echo -e "${RED}✗ Node.js version ${CURRENT_NODE_VERSION} does not meet requirement (>=${REQUIRED_NODE_VERSION})${NC}"
+    echo -e "${RED}✗ Node.js version ${CURRENT_NODE_VERSION} does not meet requirement (>=${REQUIRED_NODE_MAJOR}.0.0)${NC}"
     exit 1
 fi
 
@@ -31,11 +32,12 @@ fi
 echo -e "\n${YELLOW}Checking pnpm version...${NC}"
 if command -v pnpm &> /dev/null; then
     PNPM_VERSION=$(pnpm -v)
-    REQUIRED_PNPM_VERSION="9.0.0"
-    if npx -y semver -r ">=${REQUIRED_PNPM_VERSION}" "$PNPM_VERSION" > /dev/null 2>&1; then
-        echo -e "${GREEN}✓ pnpm version ${PNPM_VERSION} meets requirement (>=${REQUIRED_PNPM_VERSION})${NC}"
+    REQUIRED_PNPM_MAJOR=9
+    PNPM_MAJOR=$(echo "$PNPM_VERSION" | cut -d. -f1)
+    if [ "$PNPM_MAJOR" -ge "$REQUIRED_PNPM_MAJOR" ]; then
+        echo -e "${GREEN}✓ pnpm version ${PNPM_VERSION} meets requirement (>=${REQUIRED_PNPM_MAJOR}.0.0)${NC}"
     else
-        echo -e "${YELLOW}! pnpm version ${PNPM_VERSION} may not meet all requirements (>=${REQUIRED_PNPM_VERSION})${NC}"
+        echo -e "${YELLOW}! pnpm version ${PNPM_VERSION} may not meet all requirements (>=${REQUIRED_PNPM_MAJOR}.0.0)${NC}"
     fi
 else
     echo -e "${YELLOW}! pnpm not found - using npm fallback${NC}"
