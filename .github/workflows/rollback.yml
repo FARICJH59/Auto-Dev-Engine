@@ -31,6 +31,10 @@ on:
         type: boolean
         default: false
 
+# Default permissions - minimal access
+permissions:
+  contents: read
+
 env:
   ARTIFACT_RETENTION_COUNT: 5
 
@@ -38,6 +42,8 @@ jobs:
   validate-rollback:
     name: Validate Rollback Request
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       target_sha: ${{ steps.resolve.outputs.target_sha }}
       target_version: ${{ steps.resolve.outputs.target_version }}
@@ -96,6 +102,8 @@ jobs:
   rollback-aws:
     name: Rollback AWS
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: validate-rollback
     if: github.event.inputs.cloud_provider == 'all' || github.event.inputs.cloud_provider == 'aws'
     environment:
@@ -128,6 +136,8 @@ jobs:
   rollback-gcp:
     name: Rollback GCP
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: validate-rollback
     if: github.event.inputs.cloud_provider == 'all' || github.event.inputs.cloud_provider == 'gcp'
     environment:
@@ -162,6 +172,8 @@ jobs:
   rollback-azure:
     name: Rollback Azure
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: validate-rollback
     if: github.event.inputs.cloud_provider == 'all' || github.event.inputs.cloud_provider == 'azure'
     environment:
@@ -192,6 +204,8 @@ jobs:
   rollback-frontend:
     name: Rollback Frontend (Vercel)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: validate-rollback
     if: github.event.inputs.cloud_provider == 'all' || github.event.inputs.cloud_provider == 'vercel'
     environment:
@@ -219,6 +233,8 @@ jobs:
   rollback-database:
     name: Rollback Database
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: validate-rollback
     if: github.event.inputs.include_database == 'true'
     environment:
@@ -243,6 +259,7 @@ jobs:
   health-check:
     name: Post-Rollback Health Check
     runs-on: ubuntu-latest
+    permissions: {}
     needs: [validate-rollback, rollback-aws, rollback-gcp, rollback-azure, rollback-frontend]
     if: always()
 
@@ -266,6 +283,7 @@ jobs:
   notify-rollback:
     name: Send Rollback Notification
     runs-on: ubuntu-latest
+    permissions: {}
     needs: [validate-rollback, rollback-aws, rollback-gcp, rollback-azure, rollback-frontend, health-check]
     if: always()
 
