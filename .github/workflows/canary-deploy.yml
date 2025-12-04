@@ -1,0 +1,236 @@
+name: Canary Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - staging
+          - production
+      traffic_percentage:
+        description: 'Initial traffic percentage for canary'
+        required: true
+        default: '5'
+        type: choice
+        options:
+          - '5'
+          - '10'
+          - '25'
+          - '50'
+      auto_promote:
+        description: 'Auto-promote if metrics pass'
+        required: false
+        type: boolean
+        default: true
+
+# Default permissions - minimal access
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20'
+  CANARY_METRICS_THRESHOLD_LATENCY: 500  # ms
+  CANARY_METRICS_THRESHOLD_ERROR_RATE: 0.01  # 1%
+  CANARY_METRICS_THRESHOLD_CPU: 80  # percent
+
+jobs:
+  prepare-canary:
+    name: Prepare Canary Deployment
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      deployment_id: ${{ steps.deploy.outputs.deployment_id }}
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate deployment ID
+        id: deploy
+        run: |
+          DEPLOYMENT_ID="canary-$(date +%Y%m%d%H%M%S)-${{ github.sha }}"
+          echo "deployment_id=${DEPLOYMENT_ID}" >> $GITHUB_OUTPUT
+          echo "Deployment ID: ${DEPLOYMENT_ID}"
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(git describe --tags --always 2>/dev/null || echo "${{ github.sha }}")
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Build artifacts
+        run: |
+          echo "Building canary artifacts..."
+          # Add build steps here
+
+  deploy-canary:
+    name: Deploy Canary (${{ github.event.inputs.traffic_percentage }}%)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs: prepare-canary
+    environment:
+      name: canary-${{ github.event.inputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy canary version
+        run: |
+          echo "Deploying canary version: ${{ needs.prepare-canary.outputs.version }}"
+          echo "Traffic weight: ${{ github.event.inputs.traffic_percentage }}%"
+          echo "Deployment ID: ${{ needs.prepare-canary.outputs.deployment_id }}"
+
+      - name: Configure traffic splitting
+        run: |
+          echo "Configuring traffic split..."
+          echo "Canary: ${{ github.event.inputs.traffic_percentage }}%"
+          echo "Stable: $(( 100 - ${{ github.event.inputs.traffic_percentage }} ))%"
+
+  monitor-canary:
+    name: Monitor Canary Metrics
+    runs-on: ubuntu-latest
+    permissions: {}
+    needs: [prepare-canary, deploy-canary]
+    outputs:
+      metrics_passed: ${{ steps.evaluate.outputs.passed }}
+
+    steps:
+      - name: Wait for metrics collection
+        run: |
+          echo "Waiting 5 minutes for metrics collection..."
+          sleep 300
+
+      - name: Collect metrics
+        id: metrics
+        run: |
+          # Placeholder for actual metrics collection
+          echo "Collecting canary metrics..."
+          echo "latency=200" >> $GITHUB_OUTPUT
+          echo "error_rate=0.005" >> $GITHUB_OUTPUT
+          echo "cpu_usage=45" >> $GITHUB_OUTPUT
+
+      - name: Evaluate metrics
+        id: evaluate
+        run: |
+          LATENCY=${{ steps.metrics.outputs.latency }}
+          ERROR_RATE=${{ steps.metrics.outputs.error_rate }}
+          CPU_USAGE=${{ steps.metrics.outputs.cpu_usage }}
+          
+          echo "## Canary Metrics Evaluation" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value | Threshold | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          
+          PASSED=true
+          
+          if [ "$LATENCY" -gt "$CANARY_METRICS_THRESHOLD_LATENCY" ]; then
+            echo "| Latency | ${LATENCY}ms | ${CANARY_METRICS_THRESHOLD_LATENCY}ms | ❌ |" >> $GITHUB_STEP_SUMMARY
+            PASSED=false
+          else
+            echo "| Latency | ${LATENCY}ms | ${CANARY_METRICS_THRESHOLD_LATENCY}ms | ✅ |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "$CPU_USAGE" -gt "$CANARY_METRICS_THRESHOLD_CPU" ]; then
+            echo "| CPU | ${CPU_USAGE}% | ${CANARY_METRICS_THRESHOLD_CPU}% | ❌ |" >> $GITHUB_STEP_SUMMARY
+            PASSED=false
+          else
+            echo "| CPU | ${CPU_USAGE}% | ${CANARY_METRICS_THRESHOLD_CPU}% | ✅ |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "passed=${PASSED}" >> $GITHUB_OUTPUT
+          echo "Metrics evaluation passed: ${PASSED}"
+
+  progressive-rollout:
+    name: Progressive Rollout
+    runs-on: ubuntu-latest
+    permissions: {}
+    needs: [prepare-canary, monitor-canary]
+    if: needs.monitor-canary.outputs.metrics_passed == 'true' && github.event.inputs.auto_promote == 'true'
+
+    strategy:
+      max-parallel: 1
+      matrix:
+        weight: [25, 50, 100]
+
+    steps:
+      - name: Increase traffic to ${{ matrix.weight }}%
+        run: |
+          echo "Increasing canary traffic to ${{ matrix.weight }}%"
+
+      - name: Wait and monitor
+        if: matrix.weight != 100
+        run: |
+          echo "Monitoring for 2 minutes..."
+          sleep 120
+
+      - name: Final promotion
+        if: matrix.weight == 100
+        run: |
+          echo "Canary promoted to 100% - deployment complete!"
+
+  rollback-canary:
+    name: Rollback Canary
+    runs-on: ubuntu-latest
+    permissions: {}
+    needs: [prepare-canary, monitor-canary]
+    if: needs.monitor-canary.outputs.metrics_passed == 'false'
+
+    steps:
+      - name: Execute rollback
+        run: |
+          echo "Metrics check failed - initiating rollback..."
+          echo "Rolling back deployment: ${{ needs.prepare-canary.outputs.deployment_id }}"
+
+      - name: Restore stable version
+        run: |
+          echo "Restoring 100% traffic to stable version"
+
+      - name: Create rollback issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `
+            ## Canary Deployment Rollback
+            
+            **Deployment ID:** ${{ needs.prepare-canary.outputs.deployment_id }}
+            **Version:** ${{ needs.prepare-canary.outputs.version }}
+            **Reason:** Metrics threshold violation
+            
+            The canary deployment was automatically rolled back due to metrics exceeding thresholds.
+            `;
+            
+            console.log('Rollback notification would be created:', body);
+
+  notify-completion:
+    name: Notify Completion
+    runs-on: ubuntu-latest
+    permissions: {}
+    needs: [prepare-canary, monitor-canary, progressive-rollout, rollback-canary]
+    if: always()
+
+    steps:
+      - name: Send notification
+        run: |
+          if [ "${{ needs.monitor-canary.outputs.metrics_passed }}" == "true" ]; then
+            echo "✅ Canary deployment successful!"
+          else
+            echo "❌ Canary deployment rolled back"
+          fi
+
+      - name: Update deployment summary
+        run: |
+          echo "## Canary Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployment ID:** ${{ needs.prepare-canary.outputs.deployment_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** ${{ needs.prepare-canary.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Initial Traffic:** ${{ github.event.inputs.traffic_percentage }}%" >> $GITHUB_STEP_SUMMARY
+          echo "- **Metrics Passed:** ${{ needs.monitor-canary.outputs.metrics_passed }}" >> $GITHUB_STEP_SUMMARY

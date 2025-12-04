@@ -1,0 +1,219 @@
+# Prometheus Alerting Rules
+# Alert definitions for multi-cloud infrastructure monitoring
+
+groups:
+  - name: availability
+    interval: 30s
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "The service {{ $labels.job }} on {{ $labels.instance }} has been down for more than 1 minute."
+
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+            /
+            sum(rate(http_requests_total[5m])) by (service)
+          ) > 0.01
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate for {{ $labels.service }}"
+          description: "Error rate is {{ $value | humanizePercentage }} for service {{ $labels.service }}"
+
+      - alert: CriticalErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+            /
+            sum(rate(http_requests_total[5m])) by (service)
+          ) > 0.05
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical error rate for {{ $labels.service }}"
+          description: "Error rate exceeds 5% at {{ $value | humanizePercentage }} for service {{ $labels.service }}"
+
+  - name: performance
+    interval: 30s
+    rules:
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))
+          > 0.5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency for {{ $labels.service }}"
+          description: "P95 latency is {{ $value | humanizeDuration }} for service {{ $labels.service }}"
+
+      - alert: CriticalLatency
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))
+          > 2
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical latency for {{ $labels.service }}"
+          description: "P95 latency exceeds 2s at {{ $value | humanizeDuration }} for service {{ $labels.service }}"
+
+  - name: resources
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: |
+          100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value | humanize }}% on {{ $labels.instance }}"
+
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | humanize }}% on {{ $labels.instance }}"
+
+      - alert: DiskSpaceRunningLow
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Only {{ $value | humanize }}% disk space remaining on {{ $labels.instance }}"
+
+  - name: lambda
+    interval: 30s
+    rules:
+      - alert: LambdaErrors
+        expr: |
+          sum(rate(aws_lambda_errors_sum[5m])) by (function_name) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Lambda function {{ $labels.function_name }} has errors"
+          description: "Lambda function {{ $labels.function_name }} is reporting errors"
+
+      - alert: LambdaHighDuration
+        expr: |
+          aws_lambda_duration_average > 10000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Lambda function {{ $labels.function_name }} has high duration"
+          description: "Average duration is {{ $value | humanizeDuration }} for {{ $labels.function_name }}"
+
+      - alert: LambdaColdStarts
+        expr: |
+          rate(aws_lambda_invocations_sum[5m]) > 0 
+          and on(function_name) 
+          rate(aws_lambda_init_duration_sum[5m]) > 0
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "Lambda cold starts detected for {{ $labels.function_name }}"
+          description: "Function {{ $labels.function_name }} is experiencing cold starts"
+
+  - name: canary
+    interval: 15s
+    rules:
+      - alert: CanaryDeploymentFailing
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5..", deployment="canary"}[2m])) 
+            / 
+            sum(rate(http_requests_total{deployment="canary"}[2m]))
+          ) > 0.01
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Canary deployment error rate exceeded threshold"
+          description: "Canary deployment is failing with {{ $value | humanizePercentage }} error rate. Consider rollback."
+
+      - alert: CanaryLatencyRegression
+        expr: |
+          (
+            histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{deployment="canary"}[5m])) by (le))
+            /
+            histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{deployment="stable"}[5m])) by (le))
+          ) > 1.5
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Canary deployment showing latency regression"
+          description: "Canary P95 latency is {{ $value | humanize }}x higher than stable"
+
+  - name: database
+    interval: 30s
+    rules:
+      - alert: DatabaseConnectionsHigh
+        expr: |
+          pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database connections"
+          description: "Database has {{ $value }} active connections"
+
+      - alert: DatabaseReplicationLag
+        expr: |
+          pg_replication_lag_seconds > 30
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database replication lag detected"
+          description: "Replication lag is {{ $value | humanizeDuration }}"
+
+  - name: cache
+    interval: 30s
+    rules:
+      - alert: CacheHitRateLow
+        expr: |
+          (
+            redis_keyspace_hits_total 
+            / 
+            (redis_keyspace_hits_total + redis_keyspace_misses_total)
+          ) < 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis cache hit rate is low"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}"
+
+      - alert: CacheMemoryHigh
+        expr: |
+          redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage is high"
+          description: "Redis is using {{ $value | humanizePercentage }} of available memory"
