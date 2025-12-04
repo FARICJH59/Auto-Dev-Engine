@@ -1,0 +1,33 @@
+{
+  "name": "ade-fusion-stack",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ADE Fusion Stack - Auto Dev Engine with performance-tuned TypeScript services",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.14.2",
+  "scripts": {
+    "preinstall": "npx only-allow pnpm || echo 'pnpm recommended, npm fallback allowed'",
+    "install:npm": "npm install --workspaces --if-present",
+    "build": "pnpm -r run build",
+    "build:npm": "npm run build --workspaces --if-present",
+    "lint": "pnpm -r run lint",
+    "lint:npm": "npm run lint --workspaces --if-present",
+    "test": "pnpm -r run test",
+    "test:npm": "npm run test --workspaces --if-present",
+    "clean": "pnpm -r exec rm -rf dist node_modules",
+    "security-check": "./scripts/security-check.sh",
+    "audit": "pnpm audit --audit-level=high",
+    "audit:npm": "npm audit --audit-level=high"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  },
+  "workspaces": [
+    "services/*",
+    "ui"
+  ]
+}
