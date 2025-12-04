@@ -1,0 +1,24 @@
+{
+  "defaultBucket": {
+    "maxTokens": 100,
+    "refillRate": 10,
+    "refillIntervalMs": 60000,
+    "initialTokens": 100
+  },
+  "reservationExpiryMs": 300000,
+  "principalOverrides": {},
+  "resourceOverrides": {
+    "model:gpt-4": {
+      "maxTokens": 50,
+      "refillRate": 5,
+      "refillIntervalMs": 60000,
+      "initialTokens": 50
+    },
+    "model:claude": {
+      "maxTokens": 75,
+      "refillRate": 7,
+      "refillIntervalMs": 60000,
+      "initialTokens": 75
+    }
+  }
+}

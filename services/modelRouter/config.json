@@ -1,0 +1,45 @@
+{
+  "defaultPreferCost": false,
+  "fallbackEndpointId": "fallback-model",
+  "endpoints": [
+    {
+      "id": "gpt-4-primary",
+      "name": "GPT-4 Primary",
+      "provider": "openai",
+      "model": "gpt-4",
+      "url": "https://api.openai.com/v1/chat/completions",
+      "active": true,
+      "priority": 100,
+      "maxTokens": 8192,
+      "costPer1kTokens": 0.03,
+      "capabilities": ["chat", "code", "analysis"],
+      "healthy": true
+    },
+    {
+      "id": "claude-3-primary",
+      "name": "Claude 3 Primary",
+      "provider": "anthropic",
+      "model": "claude-3-sonnet",
+      "url": "https://api.anthropic.com/v1/messages",
+      "active": true,
+      "priority": 90,
+      "maxTokens": 4096,
+      "costPer1kTokens": 0.015,
+      "capabilities": ["chat", "code", "analysis"],
+      "healthy": true
+    },
+    {
+      "id": "fallback-model",
+      "name": "Fallback Model",
+      "provider": "local",
+      "model": "local-llm",
+      "url": "http://localhost:8080/v1/chat/completions",
+      "active": true,
+      "priority": 10,
+      "maxTokens": 2048,
+      "costPer1kTokens": 0.001,
+      "capabilities": ["chat"],
+      "healthy": true
+    }
+  ]
+}

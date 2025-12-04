@@ -1,0 +1,42 @@
+{
+  "pluginCachePath": "./bus/toolBus/.plugins-cache",
+  "defaultTimeoutMs": 30000,
+  "hotReloadEnabled": false,
+  "defaultPlugins": [
+    {
+      "id": "code-analyzer",
+      "name": "Code Analyzer",
+      "version": "1.0.0",
+      "description": "Analyzes code for patterns, issues, and improvements",
+      "entryPoint": "./plugins/code-analyzer/index.js",
+      "active": true,
+      "capabilities": [
+        {
+          "id": "analyze-code",
+          "name": "Analyze Code",
+          "description": "Perform static analysis on code"
+        },
+        {
+          "id": "detect-patterns",
+          "name": "Detect Patterns",
+          "description": "Detect common code patterns"
+        }
+      ]
+    },
+    {
+      "id": "test-generator",
+      "name": "Test Generator",
+      "version": "1.0.0",
+      "description": "Generates unit tests from code",
+      "entryPoint": "./plugins/test-generator/index.js",
+      "active": true,
+      "capabilities": [
+        {
+          "id": "generate-tests",
+          "name": "Generate Tests",
+          "description": "Generate unit tests for functions"
+        }
+      ]
+    }
+  ]
+}

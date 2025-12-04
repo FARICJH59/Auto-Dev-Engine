@@ -1,0 +1,16 @@
+{
+  "defaultEffect": "deny",
+  "auditEnabled": true,
+  "policies": [
+    {
+      "id": "default-deny-all",
+      "name": "Default Deny All",
+      "description": "Denies all requests by default for security",
+      "effect": "deny",
+      "principals": ["*"],
+      "actions": ["*"],
+      "resources": ["*"],
+      "priority": 0
+    }
+  ]
+}
