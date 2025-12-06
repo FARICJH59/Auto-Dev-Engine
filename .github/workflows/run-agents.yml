@@ -83,6 +83,7 @@ jobs:
             exit 0
           fi
 
+          # Run agent and append output to log, then add final status message
           if node "$SCRIPT" >> "$LOGFILE" 2>&1; then
             echo "success" > "$STATUS_FILE"
             echo "${{ matrix.name }}: success" | tee -a "$LOGFILE"

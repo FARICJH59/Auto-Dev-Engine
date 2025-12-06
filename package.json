@@ -2,7 +2,6 @@
   "name": "auto-dev-engine",
   "version": "1.0.0",
   "description": "Auto Development Engine with Agent Runners",
-  "main": "index.js",
   "scripts": {
     "test": "echo \"No tests yet\" && exit 0"
   },
