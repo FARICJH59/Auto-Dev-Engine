@@ -25,6 +25,7 @@
 *.log
 *.sql
 *.sqlite
+logs/
 
 # OS generated files #
 ######################
@@ -35,3 +36,7 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Node modules #
+################
+node_modules/
