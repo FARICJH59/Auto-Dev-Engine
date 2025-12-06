@@ -1,0 +1,91 @@
+name: Run Agents
+
+on:
+  workflow_dispatch:
+    inputs:
+      NODE_ENV:
+        description: 'Node environment'
+        required: false
+        default: 'production'
+      LSAS_ENABLED:
+        description: 'Enable LSAS agent'
+        required: false
+        default: 'true'
+      PULSE_ENABLED:
+        description: 'Enable Pulse agent'
+        required: false
+        default: 'true'
+      PARSO_ENABLED:
+        description: 'Enable Parso agent'
+        required: false
+        default: 'true'
+      GEMINI_ENABLED:
+        description: 'Enable Gemini agent'
+        required: false
+        default: 'true'
+
+jobs:
+  run-agents:
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: ${{ github.event.inputs.NODE_ENV }}
+      LSAS_ENABLED: ${{ github.event.inputs.LSAS_ENABLED }}
+      PULSE_ENABLED: ${{ github.event.inputs.PULSE_ENABLED }}
+      PARSO_ENABLED: ${{ github.event.inputs.PARSO_ENABLED }}
+      GEMINI_ENABLED: ${{ github.event.inputs.GEMINI_ENABLED }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run LSAS Agent
+        if: env.LSAS_ENABLED == 'true'
+        run: |
+          mkdir -p logs
+          node agents/lsas/lsas-agent.js > logs/lsas.log 2>&1
+        continue-on-error: true
+        id: lsas
+
+      - name: Run Pulse Agent
+        if: env.PULSE_ENABLED == 'true'
+        run: |
+          mkdir -p logs
+          node agents/pulse/pulse-agent.js > logs/pulse.log 2>&1
+        continue-on-error: true
+        id: pulse
+
+      - name: Run Parso Agent
+        if: env.PARSO_ENABLED == 'true'
+        run: |
+          mkdir -p logs
+          node agents/parso/parso-agent.js > logs/parso.log 2>&1
+        continue-on-error: true
+        id: parso
+
+      - name: Run Gemini Agent
+        if: env.GEMINI_ENABLED == 'true'
+        run: |
+          mkdir -p logs
+          node agents/gemini/gemini-agent.js > logs/gemini.log 2>&1
+        continue-on-error: true
+        id: gemini
+
+      - name: Summarize Agent Results
+        run: |
+          echo "Agent execution summary:"
+          for agent in LSAS Pulse Parso Gemini; do
+            log_file="logs/${agent,,}.log"
+            if [[ -f "$log_file" ]]; then
+              status=$(grep -i "error\|failed" "$log_file" && echo "❌ failed" || echo "✅ success")
+            else
+              status="⚪ skipped"
+            fi
+            printf '%-8s | %s\n' "$agent" "$status"
+          done
