@@ -1,0 +1,87 @@
+name: Run Agents
+
+on:
+  workflow_dispatch:
+    inputs:
+      NODE_ENV:
+        description: 'Node environment'
+        required: false
+        default: 'production'
+      LSAS_ENABLED:
+        description: 'Enable LSAS agent'
+        required: false
+        default: 'true'
+      PULSE_ENABLED:
+        description: 'Enable Pulse agent'
+        required: false
+        default: 'true'
+      PARSO_ENABLED:
+        description: 'Enable Parso agent'
+        required: false
+        default: 'true'
+      GEMINI_ENABLED:
+        description: 'Enable Gemini agent'
+        required: false
+        default: 'true'
+
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: LSAS
+            dir: lsas
+            flag: LSAS_ENABLED
+          - name: Pulse
+            dir: pulse
+            flag: PULSE_ENABLED
+          - name: Parso
+            dir: parso
+            flag: PARSO_ENABLED
+          - name: Gemini
+            dir: gemini
+            flag: GEMINI_ENABLED
+    env:
+      NODE_ENV: ${{ github.event.inputs.NODE_ENV }}
+      LSAS_ENABLED: ${{ github.event.inputs.LSAS_ENABLED }}
+      PULSE_ENABLED: ${{ github.event.inputs.PULSE_ENABLED }}
+      PARSO_ENABLED: ${{ github.event.inputs.PARSO_ENABLED }}
+      GEMINI_ENABLED: ${{ github.event.inputs.GEMINI_ENABLED }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Run ${{ matrix.name }} agent
+        id: run_agent
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          STATUS_FILE="logs/${{ matrix.dir }}.status"
+          LOGFILE="logs/${{ matrix.dir }}.log"
+
+          AGENT_FLAG="${{ matrix.flag }}"
+          AGENT_DIR="${{ matrix.dir }}"
+          if [[ "${!AGENT_FLAG:-}" != "true" ]]; then
+            echo "skipped" > "$STATUS_FILE"
+            echo "${{ matrix.name }}: disabled; skipping." | tee "$LOGFILE"
+            exit 0
+          fi
+
+          SCRIPT="agents/${AGENT_DIR}/${AGENT_DIR}-agent.js"
+          if [[ ! -f "$SCRIPT" ]]; then
+            echo "failed" > "$STATUS_FILE"
+            echo "${{ matrix.name }}: script not found: $SCRIPT" | tee "$LOGFILE"
+            exit 0
+          fi
+
+          if node "$SCRIPT" >> "$LOGFILE" 2>&1; then
+            echo "success" > "$STATUS_FILE"
+            echo "${{ matrix.name }}: success" | tee -a "$LOGFILE"
+          else
+            echo "failed" > "$STATUS_FILE"
+            echo "${{ matrix.name }}: failed" | tee -a "$LOGFILE"
+          fi
