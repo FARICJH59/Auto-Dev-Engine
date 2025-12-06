@@ -49,9 +49,9 @@ jobs:
       PARSO_ENABLED: ${{ github.event.inputs.PARSO_ENABLED }}
       GEMINI_ENABLED: ${{ github.event.inputs.GEMINI_ENABLED }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
@@ -65,6 +65,8 @@ jobs:
 
           AGENT_FLAG="${{ matrix.flag }}"
           AGENT_DIR="${{ matrix.dir }}"
+          # Use indirect variable expansion to check if agent is enabled
+          # ${!AGENT_FLAG} expands to the value of the variable named by AGENT_FLAG
           if [[ "${!AGENT_FLAG:-}" != "true" ]]; then
             echo "skipped" > "$STATUS_FILE"
             echo "${{ matrix.name }}: disabled; skipping." | tee "$LOGFILE"
@@ -75,6 +77,7 @@ jobs:
           if [[ ! -f "$SCRIPT" ]]; then
             echo "failed" > "$STATUS_FILE"
             echo "${{ matrix.name }}: script not found: $SCRIPT" | tee "$LOGFILE"
+            echo "::warning::Agent script not found: $SCRIPT"
             exit 0
           fi
 

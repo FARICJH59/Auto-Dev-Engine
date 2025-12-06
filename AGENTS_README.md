@@ -102,7 +102,6 @@ To add a new agent:
 ### Agent Script Template
 
 ```javascript
-#!/usr/bin/env node
 /**
  * Agent Name - Description
  */
@@ -115,6 +114,8 @@ console.log('Environment:', process.env.NODE_ENV || 'development');
 console.log('Agent completed successfully.');
 ```
 
+Note: The script is executed via `node` command in the workflow, so a shebang line is not required.
+
 ## Technical Details
 
 ### Environment Variables
@@ -125,9 +126,10 @@ console.log('Agent completed successfully.');
 ### Error Handling
 
 - Agents run with `set -euo pipefail` for strict error handling
-- Script not found is treated as a non-fatal error (status: failed, exit 0)
-- Agent execution failures write to status file but don't fail the workflow
+- Script not found: Records "failed" status and exits with 0 (doesn't fail the workflow job but shows as failed in status tracking)
+- Agent execution failures: Write to status file but don't fail the overall workflow
 - Each agent is independent and doesn't affect others
+- Warnings are emitted to the Actions UI for visibility
 
 ### Status Tracking
 

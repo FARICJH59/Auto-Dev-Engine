@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Parso Agent - Placeholder implementation
  * This agent demonstrates the basic structure for agent execution.
