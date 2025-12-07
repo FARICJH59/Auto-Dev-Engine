@@ -6,7 +6,6 @@
  */
 
 const express = require('express');
-const { spawn } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
