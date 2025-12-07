@@ -1,0 +1,78 @@
+name: Run Agents Matrix
+
+on:
+  workflow_dispatch:
+    inputs:
+      tenantId:
+        description: 'Tenant ID'
+        required: true
+        default: 'default-tenant'
+      projectId:
+        description: 'Project ID'
+        required: true
+        default: 'auto-dev-engine'
+      agents:
+        description: 'Comma-separated list of agents (or "all")'
+        required: true
+        default: 'all'
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up agent matrix
+        id: set-matrix
+        run: |
+          if [ "${{ github.event.inputs.agents }}" == "all" ]; then
+            # Run all enabled agents from agents.yaml
+            AGENTS='["lsas", "pulse", "parso", "gemini"]'
+          else
+            # Parse comma-separated list
+            IFS=',' read -ra AGENT_ARRAY <<< "${{ github.event.inputs.agents }}"
+            AGENTS=$(printf '%s\n' "${AGENT_ARRAY[@]}" | jq -R . | jq -s .)
+          fi
+          echo "matrix=$AGENTS" >> $GITHUB_OUTPUT
+
+  run-agents:
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        agent: ${{ fromJson(needs.setup.outputs.matrix) }}
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install CLI dependencies
+        run: |
+          cd cli
+          npm install
+
+      - name: Run Agent - ${{ matrix.agent }}
+        run: |
+          cd cli
+          npm run build
+          node bin/ade.js run ${{ matrix.agent }} \
+            --tenant ${{ github.event.inputs.tenantId }} \
+            --project ${{ github.event.inputs.projectId }}
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.agent }}
+          path: logs/
+          retention-days: 7

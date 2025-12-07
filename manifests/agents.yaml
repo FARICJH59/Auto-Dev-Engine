@@ -1,0 +1,9 @@
+agents:
+  lsas:
+    enabled: true
+  pulse:
+    enabled: true
+  parso:
+    enabled: true
+  gemini:
+    enabled: true
