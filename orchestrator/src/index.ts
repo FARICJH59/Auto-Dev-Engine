@@ -1,9 +1,18 @@
 import express, { Express, Request, Response } from 'express';
 import { router } from './router';
 import winston from 'winston';
+import * as path from 'path';
+import { promises as fs } from 'fs';
 
 const app: Express = express();
 const port = process.env.PORT || 8080;
+
+// Setup project root
+const projectRoot = process.env.PROJECT_ROOT || path.join(__dirname, '..', '..');
+const logsDir = path.join(projectRoot, 'logs');
+
+// Ensure logs directory exists
+fs.mkdir(logsDir, { recursive: true }).catch(console.error);
 
 // Configure logger
 export const logger = winston.createLogger({
@@ -14,7 +23,7 @@ export const logger = winston.createLogger({
   ),
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: 'logs/orchestrator.log' })
+    new winston.transports.File({ filename: path.join(logsDir, 'orchestrator.log') })
   ]
 });
 

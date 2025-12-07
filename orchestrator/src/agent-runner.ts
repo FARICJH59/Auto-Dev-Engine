@@ -26,10 +26,17 @@ interface PipelineResult {
 }
 
 /**
+ * Get the project root directory
+ */
+function getProjectRoot(): string {
+  return process.env.PROJECT_ROOT || path.join(process.cwd(), '..');
+}
+
+/**
  * Load manifest files from /manifests directory
  */
 async function loadManifests(): Promise<Record<string, Manifest>> {
-  const manifestDir = path.join(process.cwd(), 'manifests');
+  const manifestDir = path.join(getProjectRoot(), 'manifests');
   const manifests: Record<string, Manifest> = {};
 
   try {
@@ -61,7 +68,7 @@ export async function runAgent(
   agent: string
 ): Promise<AgentResult> {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const logDir = path.join(process.cwd(), 'logs', timestamp);
+  const logDir = path.join(getProjectRoot(), 'logs', timestamp);
   const logFile = path.join(logDir, `${agent}.log`);
   const statusFile = path.join(logDir, `${agent}.status`);
 
@@ -85,7 +92,8 @@ export async function runAgent(
   }
 
   // Execute agent
-  const agentPath = path.join(process.cwd(), 'agents', agent, `${agent}-agent.js`);
+  // Look for agents in parent directory (project root) or current directory
+  const agentPath = path.join(getProjectRoot(), 'agents', agent, `${agent}-agent.js`);
 
   return new Promise((resolve) => {
     let output = '';
@@ -148,7 +156,7 @@ export async function getAgentStatus(agent: string): Promise<{
   status: string;
   lastRun?: string;
 }> {
-  const logsDir = path.join(process.cwd(), 'logs');
+  const logsDir = path.join(getProjectRoot(), 'logs');
 
   try {
     // Find the most recent status file for this agent
