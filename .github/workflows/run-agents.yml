@@ -1,0 +1,91 @@
+name: Phase 1 - Run Agent Matrix
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: 'Specific agent to run (leave empty for all)'
+        required: false
+        type: string
+
+jobs:
+  agent-matrix:
+    name: Run ${{ matrix.agent }} Agent
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        agent:
+          - code-analysis
+          - test-generation
+          - deployment
+          - monitoring
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: orchestrator/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./orchestrator
+        run: npm ci
+
+      - name: Run ${{ matrix.agent }} agent
+        working-directory: ./orchestrator
+        run: |
+          echo "Running agent: ${{ matrix.agent }}"
+          echo "Agent: ${{ matrix.agent }}"
+          echo "Status: Simulated execution"
+          echo "Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          
+          # Simulate agent execution
+          node -e "console.log('Agent ${{ matrix.agent }} executed successfully')"
+
+      - name: Upload agent results
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-results-${{ matrix.agent }}
+          path: |
+            orchestrator/*.log
+            orchestrator/results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  aggregate-results:
+    name: Aggregate Agent Results
+    runs-on: ubuntu-latest
+    needs: agent-matrix
+    if: always()
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./agent-results
+
+      - name: Display results
+        run: |
+          echo "=== Agent Execution Summary ==="
+          echo "All agents have completed execution"
+          ls -la ./agent-results/ || echo "No artifacts found"
+          
+      - name: Check for failures
+        run: |
+          if [ "${{ needs.agent-matrix.result }}" == "failure" ]; then
+            echo "Some agents failed"
+            exit 1
+          fi
+          echo "All agents completed successfully"

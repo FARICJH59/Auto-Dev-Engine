@@ -1,0 +1,26 @@
+{
+  "name": "ade-orchestrator",
+  "version": "1.0.0",
+  "description": "Auto-Dev-Engine Orchestrator - Phase 2 Pipeline Orchestration",
+  "main": "src/pipeline.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/pipeline.js",
+    "dev": "node --watch src/pipeline.js",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "orchestrator",
+    "pipeline",
+    "automation",
+    "agents"
+  ],
+  "author": "Auto-Dev-Engine",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
