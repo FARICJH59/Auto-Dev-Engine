@@ -62,11 +62,17 @@ class PulseAgent:
     
     def _collect_metrics(self):
         """Collect system performance metrics"""
+        try:
+            cpu_freq = psutil.cpu_freq()
+            cpu_freq_dict = cpu_freq._asdict() if cpu_freq else None
+        except (OSError, AttributeError):
+            cpu_freq_dict = None
+
         metrics = {
             "cpu": {
                 "percent": psutil.cpu_percent(interval=1),
                 "count": psutil.cpu_count(),
-                "freq": psutil.cpu_freq()._asdict() if psutil.cpu_freq() else None
+                "freq": cpu_freq_dict
             },
             "memory": {
                 "total": psutil.virtual_memory().total,

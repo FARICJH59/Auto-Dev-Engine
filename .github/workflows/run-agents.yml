@@ -18,6 +18,8 @@ jobs:
   run-agents-matrix:
     name: Run ${{ matrix.agent }} Agent
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         agent: [lsas, pulse, parso, gemini]
@@ -67,6 +69,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: run-agents-matrix
     if: always()
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
@@ -98,7 +102,7 @@ jobs:
           path: |
             agents/orchestrator.log
             agents/orchestration_report.json
-            agents/*/lsas_report.json
+            agents/lsas_report.json
             agents/pulse_report.json
             agents/parso_report.json
             agents/gemini_report.json
@@ -131,6 +135,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [run-agents-matrix, run-all-agents]
     if: always()
+    permissions:
+      contents: read
 
     steps:
       - name: Download all artifacts
@@ -162,6 +168,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: run-all-agents
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository

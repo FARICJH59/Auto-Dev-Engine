@@ -92,11 +92,19 @@ class ParsoAgent:
             }
             
             try:
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                     content = f.read()
-                
+
                 # Parse the file
                 tree = ast.parse(content, filename=str(file_path))
+
+            except UnicodeDecodeError as e:
+                file_result["status"] = "encoding_error"
+                file_result["errors"].append({
+                    "type": "UnicodeDecodeError",
+                    "message": f"File encoding issue: {str(e)}"
+                })
+                logger.warning(f"✗ Encoding error in {file_path}: {e}")
                 
                 # Analyze AST
                 file_result["lines"] = len(content.splitlines())

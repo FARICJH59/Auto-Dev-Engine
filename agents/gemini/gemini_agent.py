@@ -82,33 +82,42 @@ class GeminiAgent:
             "key_files": []
         }
         
-        # Analyze directory structure
-        for item in repo_path.rglob("*"):
-            if any(part.startswith('.') for part in item.parts):
-                continue
-                
-            if item.is_file():
-                analysis["structure"]["files"].append(str(item))
+        # Analyze directory structure using os.walk for better performance
+        for root, dirs, files in os.walk(repo_path):
+            # Skip hidden directories
+            dirs[:] = [d for d in dirs if not d.startswith('.')]
+
+            for filename in files:
+                if filename.startswith('.'):
+                    continue
+
+                file_path = Path(root) / filename
+                analysis["structure"]["files"].append(str(file_path))
                 analysis["structure"]["total_files"] += 1
-                
+
                 try:
-                    size = item.stat().st_size
+                    size = file_path.stat().st_size
                     analysis["structure"]["total_size"] += size
-                    
+
+
                     # Track languages
-                    suffix = item.suffix
+                    suffix = file_path.suffix
                     if suffix:
                         analysis["languages"][suffix] = analysis["languages"].get(suffix, 0) + 1
-                    
+
                     # Identify key files
-                    if item.name in ['README.md', 'setup.py', 'requirements.txt', 'package.json', 'Dockerfile']:
-                        analysis["key_files"].append(str(item))
-                        
+                    if filename in ['README.md', 'setup.py', 'requirements.txt', 'package.json', 'Dockerfile']:
+                        analysis["key_files"].append(str(file_path))
+
                 except Exception as e:
-                    logger.warning(f"Error analyzing {item}: {e}")
-            
-            elif item.is_dir():
-                analysis["structure"]["directories"].append(str(item))
+                    logger.warning(f"Error analyzing {file_path}: {e}")
+
+        # Count directories
+        for root, dirs, _ in os.walk(repo_path):
+            dirs[:] = [d for d in dirs if not d.startswith('.')]
+            for dirname in dirs:
+                dir_path = Path(root) / dirname
+                analysis["structure"]["directories"].append(str(dir_path))
         
         logger.info(f"Analyzed {analysis['structure']['total_files']} files")
         return analysis

@@ -154,6 +154,9 @@ def main():
         
         # Exit with error if any agent failed
         if report['summary']['failed'] > 0:
+            failed_agents = [name for name, result in report['agent_results'].items()
+                           if result.get('status') in ['failed', 'error', 'timeout']]
+            logger.error(f"Failed agents: {', '.join(failed_agents)}")
             return 1
         return 0
         

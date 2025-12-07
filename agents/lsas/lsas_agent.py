@@ -77,7 +77,7 @@ class LSASAgent:
         }
         
         for ext, lang in extension_map.items():
-            if list(repo_path.rglob(f"*{ext}")):
+            if any(repo_path.rglob(f"*{ext}")):
                 if lang not in languages:
                     languages.append(lang)
         
