@@ -1,59 +1,321 @@
-<header>
+# 🚀 Auto-Dev-Engine
 
-# Hello GitHub Actions
+**Full-Stack Automated Development and Deployment Platform**
 
-_Create and run a GitHub Actions workflow._
+[![Deploy Backend](https://github.com/FARICJH59/Auto-Dev-Engine/workflows/Phase%203%20-%20Deploy%20Backend%20to%20Cloud%20Run/badge.svg)](https://github.com/FARICJH59/Auto-Dev-Engine/actions)
+[![Deploy Frontend](https://github.com/FARICJH59/Auto-Dev-Engine/workflows/Phase%203%20-%20Deploy%20Frontend%20to%20Vercel/badge.svg)](https://github.com/FARICJH59/Auto-Dev-Engine/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-</header>
-
-## Step 1: Create a workflow file
-
-_Welcome to "Hello GitHub Actions"! :wave:_
-
-**What is _GitHub Actions_?**: GitHub Actions is a flexible way to automate nearly every aspect of your team's software workflow. You can automate testing, continuously deploy, review code, manage issues and pull requests, and much more. The best part, these workflows are stored as code in your repository and easily shared and reused across teams. To learn more, check out these resources:
-
-- The GitHub Actions feature page, see [GitHub Actions](https://github.com/features/actions).
-- The "GitHub Actions" user documentation, see [GitHub Actions](https://docs.github.com/actions).
-
-**What is a _workflow_?**: A workflow is a configurable automated process that will run one or more jobs. Workflows are defined in special files in the `.github/workflows` directory and they execute based on your chosen event. For this exercise, we'll use a `pull_request` event.
-
-- To read more about workflows, jobs, and events, see "[Understanding GitHub Actions](https://docs.github.com/en/actions/learn-github-actions/understanding-github-actions)".
-- If you want to learn more about the `pull_request` event before using it, see "[pull_request](https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request)".
-
-To get you started, we ran an Actions workflow in your new repository that, among other things, created a branch for you to work in, called `welcome-workflow`.
-
-### :keyboard: Activity: Create a workflow file
-
-1. Open a new browser tab, and navigate to this same repository. Then, work on the steps in your second tab while you read the instructions in this tab.
-1. Create a pull request. This will contain all of the changes you'll make throughout this part of the course.
-
-   Click the **Pull Requests** tab, click **New pull request**, set `base: main` and `compare:welcome-workflow`, click **Create pull request**, then click **Create pull request** again.
-
-1. Navigate to the **Code** tab.
-1. From the **main** branch dropdown, click on the **welcome-workflow** branch.
-1. Navigate to the `.github/workflows/` folder, then select **Add file** and click on **Create new file**.
-1. In the **Name your file** field, enter `welcome.yml`.
-1. Add the following content to the `welcome.yml` file:
-
-   ```yaml copy
-   name: Post welcome comment
-   on:
-     pull_request:
-       types: [opened]
-   permissions:
-     pull-requests: write
-   ```
-
-1. To commit your changes, click **Commit changes**.
-1. Type a commit message, select **Commit directly to the welcome-workflow branch** and click **Commit changes**.
-1. Wait about 20 seconds, then refresh this page (the one you're following instructions from). A separate Actions workflow in the repository (not the workflow you created) will run and will automatically replace the contents of this README file with instructions for the next step.
-
-<footer>
+Auto-Dev-Engine is a comprehensive platform for automating software development workflows, from code analysis to deployment, using GitHub Actions, Google Cloud Run, and Vercel.
 
 ---
 
-Get help: [Post in our discussion board](https://github.com/orgs/skills/discussions/categories/hello-github-actions) &bull; [Review the GitHub status page](https://www.githubstatus.com/)
+## 📋 Table of Contents
 
-&copy; 2023 GitHub &bull; [Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/code_of_conduct.md) &bull; [MIT License](https://gh.io/mit)
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Phase Overview](#phase-overview)
+- [Deployment](#deployment)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [License](#license)
 
-</footer>
+---
+
+## 🎯 Overview
+
+Auto-Dev-Engine implements a three-phase approach to development automation:
+
+- **Phase 1**: Agent Matrix Execution - Parallel execution of development agents
+- **Phase 2**: Pipeline Orchestration - Coordinated workflow management
+- **Phase 3**: Full-Stack Deployment - Automated CI/CD with Cloud Run and Vercel
+
+### Technology Stack
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| **Backend** | Node.js + Express | Orchestrator API |
+| **Frontend** | Next.js + React | Dashboard UI |
+| **Deployment** | Cloud Run | Backend hosting |
+| **Deployment** | Vercel | Frontend hosting |
+| **CI/CD** | GitHub Actions | Automation pipeline |
+| **Container** | Docker | Containerization |
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    GitHub Repository                     │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
+│  │   Phase 1    │  │   Phase 2    │  │   Phase 3    │ │
+│  │   Agents     │→ │ Orchestrator │→ │  Deployment  │ │
+│  │   Matrix     │  │   Pipeline   │  │  Automation  │ │
+│  └──────────────┘  └──────────────┘  └──────────────┘ │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+                        ↓
+        ┌───────────────────────────────┐
+        │     GitHub Actions CI/CD      │
+        └───────────────────────────────┘
+                        ↓
+        ┌───────────────┴───────────────┐
+        ↓                               ↓
+┌──────────────┐              ┌──────────────┐
+│  Cloud Run   │              │    Vercel    │
+│   (Backend)  │◄────────────►│  (Frontend)  │
+└──────────────┘              └──────────────┘
+```
+
+---
+
+## ✨ Features
+
+### Phase 1: Agent Matrix Execution
+
+- ✅ Parallel agent execution via GitHub Actions matrix strategy
+- ✅ Agent types: code-analysis, test-generation, deployment, monitoring
+- ✅ Artifact collection and result aggregation
+- ✅ Configurable via workflow dispatch
+
+### Phase 2: Pipeline Orchestration
+
+- ✅ RESTful API for agent management
+- ✅ Sequential pipeline execution
+- ✅ Health monitoring and status reporting
+- ✅ Express-based orchestrator service
+- ✅ Docker containerization
+
+### Phase 3: Full-Stack Deployment
+
+- ✅ Automated Cloud Run deployment for backend
+- ✅ Automated Vercel deployment for frontend
+- ✅ Environment variable management via GitHub Secrets
+- ✅ CI/CD integration with GitHub Actions
+- ✅ Production-ready configuration
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 20+
+- Docker (for local testing)
+- Google Cloud Platform account
+- Vercel account
+- GitHub repository with Actions enabled
+
+### Local Development
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/FARICJH59/Auto-Dev-Engine.git
+   cd Auto-Dev-Engine
+   ```
+
+2. **Start the backend orchestrator**
+   ```bash
+   cd orchestrator
+   npm install
+   npm start
+   # Runs on http://localhost:8080
+   ```
+
+3. **Start the frontend dashboard**
+   ```bash
+   cd frontend
+   npm install
+   NEXT_PUBLIC_API_URL=http://localhost:8080 npm run dev
+   # Runs on http://localhost:3000
+   ```
+
+4. **Access the dashboard**
+   
+   Open your browser to `http://localhost:3000`
+
+---
+
+## 📦 Phase Overview
+
+### Phase 1: Agent Matrix
+
+**Location**: `.github/workflows/run-agents.yml`
+
+Execute agents in parallel:
+```bash
+gh workflow run run-agents.yml
+```
+
+### Phase 2: Orchestrator
+
+**Location**: `orchestrator/`
+
+Key endpoints:
+- `GET /health` - Health check
+- `GET /status` - Orchestrator status
+- `GET /agents` - List agents
+- `POST /agents/:name/execute` - Execute agent
+- `POST /pipeline/execute` - Execute pipeline
+
+### Phase 3: Deployment
+
+**Backend Workflow**: `.github/workflows/deploy-cloud-run.yml`
+**Frontend Workflow**: `.github/workflows/deploy-vercel.yml`
+
+Automatic deployment on push to `main` branch.
+
+---
+
+## 🌐 Deployment
+
+### Automated Deployment
+
+All deployments are automated via GitHub Actions:
+
+1. **Push to main branch**
+2. **Backend** automatically deploys to Cloud Run
+3. **Frontend** automatically deploys to Vercel
+4. **Agents** execute on every push/PR
+
+### Manual Deployment
+
+Trigger deployments manually:
+
+```bash
+# Backend
+gh workflow run deploy-cloud-run.yml
+
+# Frontend
+gh workflow run deploy-vercel.yml
+
+# Agents
+gh workflow run run-agents.yml
+```
+
+### Configuration
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed setup instructions including:
+- Google Cloud Platform setup
+- Vercel configuration
+- GitHub Secrets configuration
+- Troubleshooting guide
+
+---
+
+## 📚 Documentation
+
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Complete deployment guide
+- **[orchestrator/README.md](./orchestrator/README.md)** - Backend documentation
+- **[frontend/README.md](./frontend/README.md)** - Frontend documentation
+
+### API Documentation
+
+**Base URL (Production)**: `https://ade-orchestrator-xxxxx.run.app`
+
+**Example API Call**:
+```bash
+curl https://ade-orchestrator-xxxxx.run.app/status
+```
+
+---
+
+## 🛠️ Development
+
+### Project Structure
+
+```
+Auto-Dev-Engine/
+├── .github/
+│   └── workflows/
+│       ├── run-agents.yml          # Phase 1
+│       ├── deploy-cloud-run.yml    # Phase 3 Backend
+│       └── deploy-vercel.yml       # Phase 3 Frontend
+├── orchestrator/                   # Phase 2 Backend
+│   ├── src/
+│   │   └── pipeline.js
+│   ├── Dockerfile
+│   └── package.json
+├── frontend/                       # Phase 3 Frontend
+│   ├── pages/
+│   ├── vercel.json
+│   └── package.json
+├── DEPLOYMENT.md                   # Deployment guide
+├── README.md                       # This file
+└── LICENSE
+```
+
+### Running Tests
+
+```bash
+# Backend tests
+cd orchestrator
+npm test
+
+# Frontend tests
+cd frontend
+npm test
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🆘 Support
+
+- **Issues**: [GitHub Issues](https://github.com/FARICJH59/Auto-Dev-Engine/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/FARICJH59/Auto-Dev-Engine/discussions)
+- **Documentation**: See [DEPLOYMENT.md](./DEPLOYMENT.md)
+
+---
+
+## 🎯 Roadmap
+
+- [x] Phase 1: Agent Matrix Execution
+- [x] Phase 2: Pipeline Orchestration
+- [x] Phase 3: Full-Stack Deployment
+- [ ] Phase 4: Advanced Monitoring & Analytics
+- [ ] Phase 5: Multi-cloud Support
+- [ ] Phase 6: AI-Powered Optimization
+
+---
+
+## 🌟 Acknowledgments
+
+Built with:
+- [GitHub Actions](https://github.com/features/actions)
+- [Google Cloud Run](https://cloud.google.com/run)
+- [Vercel](https://vercel.com)
+- [Next.js](https://nextjs.org)
+- [Express](https://expressjs.com)
+
+---
+
+<div align="center">
+
+**Made with ❤️ by the Auto-Dev-Engine Team**
+
+[⭐ Star this repo](https://github.com/FARICJH59/Auto-Dev-Engine) if you find it useful!
+
+</div>
