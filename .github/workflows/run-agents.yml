@@ -12,6 +12,8 @@ on:
 jobs:
   run-agents:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         agent: [lsas, pulse, parso, gemini]
@@ -61,6 +63,8 @@ jobs:
 
   aggregate-results:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: run-agents
     if: always()
 
