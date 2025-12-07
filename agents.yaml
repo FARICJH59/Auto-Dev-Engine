@@ -1,0 +1,13 @@
+agents:
+  lsas:
+    enabled: true
+    parallel: true
+  pulse:
+    enabled: true
+    parallel: false
+  parso:
+    enabled: true
+    parallel: true
+  gemini:
+    enabled: true
+    parallel: true
