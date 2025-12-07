@@ -1,0 +1,9 @@
+pipelines:
+  default:
+    - lsas
+    - pulse
+    - parso
+    - gemini
+  fast-track:
+    - lsas
+    - gemini
