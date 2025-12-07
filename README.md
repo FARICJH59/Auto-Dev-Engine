@@ -139,6 +139,13 @@ GEMINI_API_KEY    - Google Gemini API key (if using AI features)
 GCP_SA_KEY        - GCP Service Account key (JSON format)
 ```
 
+⚠️ **Security Best Practices:**
+- **Never commit secrets** to your repository or expose them in logs
+- **Use least-privilege principles**: Grant service accounts only the minimum permissions needed
+- **Rotate credentials regularly**: Update tokens and keys periodically
+- **Use GitHub Secrets**: Always store sensitive values as encrypted secrets, not in code
+- **Limit secret access**: Only give repository collaborators access when necessary
+
 ### Deployment Workflow Features
 
 - **Automated Deployment**: Deploys on every push to `main`
