@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Auto-Dev-Engine Orchestrator - Phase 2 Pipeline Orchestration",
   "main": "src/pipeline.js",
-  "type": "module",
   "scripts": {
     "start": "node src/pipeline.js",
     "dev": "node --watch src/pipeline.js",
