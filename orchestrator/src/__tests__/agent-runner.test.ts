@@ -17,7 +17,7 @@ describe('Agent Runner', () => {
     it('should return true for enabled agent', () => {
       const config = {
         agents: {
-          lsas: { enabled: true }
+          lsas: { enabled: true, parallel: true }
         }
       };
       expect(isAgentEnabled('lsas', config)).toBe(true);
@@ -26,7 +26,7 @@ describe('Agent Runner', () => {
     it('should return false for disabled agent', () => {
       const config = {
         agents: {
-          lsas: { enabled: false }
+          lsas: { enabled: false, parallel: true }
         }
       };
       expect(isAgentEnabled('lsas', config)).toBe(false);
@@ -35,7 +35,7 @@ describe('Agent Runner', () => {
     it('should return false for non-existent agent', () => {
       const config = {
         agents: {
-          lsas: { enabled: true }
+          lsas: { enabled: true, parallel: true }
         }
       };
       expect(isAgentEnabled('nonexistent', config)).toBe(false);

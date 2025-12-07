@@ -1,7 +1,13 @@
-import { runAgent, isAgentEnabled, skipAgent, AgentResult } from './agent-runner.js';
+import { runAgent, isAgentEnabled, skipAgent, AgentResult, AgentsConfig } from './agent-runner.js';
 import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
+
+export interface PipelinesConfig {
+  pipelines: {
+    [pipelineName: string]: string[];
+  };
+}
 
 export interface PipelineResult {
   pipelineName: string;
@@ -18,7 +24,7 @@ export interface PipelineResult {
  * Load agents configuration from agents.yaml
  * @returns Parsed agents configuration
  */
-function loadAgentsConfig(): any {
+function loadAgentsConfig(): AgentsConfig {
   const projectRoot = process.cwd();
   const agentsConfigPath = path.join(projectRoot, 'agents.yaml');
   
@@ -27,14 +33,14 @@ function loadAgentsConfig(): any {
   }
   
   const fileContents = fs.readFileSync(agentsConfigPath, 'utf8');
-  return yaml.load(fileContents);
+  return yaml.load(fileContents) as AgentsConfig;
 }
 
 /**
  * Load pipelines configuration from pipelines.yaml
  * @returns Parsed pipelines configuration
  */
-function loadPipelinesConfig(): any {
+function loadPipelinesConfig(): PipelinesConfig {
   const projectRoot = process.cwd();
   const pipelinesConfigPath = path.join(projectRoot, 'pipelines.yaml');
   
@@ -43,7 +49,7 @@ function loadPipelinesConfig(): any {
   }
   
   const fileContents = fs.readFileSync(pipelinesConfigPath, 'utf8');
-  return yaml.load(fileContents);
+  return yaml.load(fileContents) as PipelinesConfig;
 }
 
 /**

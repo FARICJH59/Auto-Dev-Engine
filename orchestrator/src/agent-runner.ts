@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
@@ -7,6 +7,17 @@ export interface AgentResult {
   success: boolean;
   logFile: string;
   error?: string;
+}
+
+export interface AgentConfig {
+  enabled: boolean;
+  parallel: boolean;
+}
+
+export interface AgentsConfig {
+  agents: {
+    [agentName: string]: AgentConfig;
+  };
 }
 
 /**
@@ -40,7 +51,7 @@ export async function runAgent(agentName: string, logTimestamp?: string): Promis
   }
 
   return new Promise<AgentResult>((resolve) => {
-    const proc = exec(`node ${agentScript}`, { cwd: projectRoot }, (err, stdout, stderr) => {
+    const proc = execFile('node', [agentScript], { cwd: projectRoot }, (err, stdout, stderr) => {
       // Write stdout and stderr to log file
       let logContent = '';
       if (stdout) {
@@ -79,7 +90,7 @@ export async function runAgent(agentName: string, logTimestamp?: string): Promis
  * @param agentsConfig - Parsed agents.yaml configuration
  * @returns boolean indicating if agent is enabled
  */
-export function isAgentEnabled(agentName: string, agentsConfig: any): boolean {
+export function isAgentEnabled(agentName: string, agentsConfig: AgentsConfig): boolean {
   return agentsConfig?.agents?.[agentName]?.enabled === true;
 }
 
