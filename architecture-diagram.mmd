@@ -1,0 +1,57 @@
+%% Multi-Agent Orchestrator + CI/CD + Cloud Run/Vercel Deployment
+
+flowchart TD
+    %% PHASE 1: Orchestrator Core
+    A[Start: User triggers workflow] --> B[Orchestrator CLI]
+    B --> C[Validate input & environment]
+    C --> D{Check Phases}
+    
+    %% PHASE 1 Agents
+    D -->|Phase 1| E1[LSAS Agent]
+    D -->|Phase 1| E2[Pulse Agent]
+    D -->|Phase 1| E3[Parso Agent]
+    D -->|Phase 1| E4[Gemini Agent]
+    
+    %% Matrix execution
+    E1 --> F[Log output & status]
+    E2 --> F
+    E3 --> F
+    E4 --> F
+    
+    %% PHASE 2 Agents
+    D -->|Phase 2| G1[AgentX]
+    D -->|Phase 2| G2[AgentY]
+    D -->|Phase 2| G3[AgentZ]
+    G1 --> H[Log Phase 2 output]
+    G2 --> H
+    G3 --> H
+    
+    %% PHASE 3 Agents
+    D -->|Phase 3| I1[Analytics Agent]
+    D -->|Phase 3| I2[Reporting Agent]
+    I1 --> J[Aggregate Results]
+    I2 --> J
+    
+    %% CI/CD Workflow
+    F --> K[GitHub Actions Workflow]
+    H --> K
+    J --> K
+    K --> L[Run matrix-based jobs for agents]
+    L --> M[Generate status & logs]
+    
+    %% Deployment
+    M --> N{Deploy to Cloud}
+    N -->|Cloud Run| O[Cloud Run Service]
+    N -->|Vercel| P[Vercel Frontend]
+    
+    %% Documentation & Monitoring
+    M --> Q[Update AGENTS_README.md]
+    M --> R[Update IMPLEMENTATION_SUMMARY.md]
+    N --> S[Monitor via Cloud Logging]
+    
+    %% End
+    O --> T[Workflow Complete]
+    P --> T
+    Q --> T
+    R --> T
+    S --> T
