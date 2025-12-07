@@ -43,7 +43,7 @@ jobs:
       - name: Generate status report
         if: always()
         run: |
-          if [ ${{ steps.run-agent.outcome }} == "success" ]; then
+          if [ '${{ steps.run-agent.outcome }}' == 'success' ]; then
             echo "✅ Agent ${{ matrix.agent }} completed successfully"
             echo "status=success" >> agent-${{ matrix.agent }}-status.txt
           else
@@ -81,7 +81,7 @@ jobs:
 
           for agent in lsas pulse parso gemini; do
             if [ -f "artifacts/agent-${agent}-status/agent-${agent}-status.txt" ]; then
-              status=$(cat "artifacts/agent-${agent}-status/agent-${agent}-status.txt" | grep status | cut -d= -f2)
+              status=$(grep status "artifacts/agent-${agent}-status/agent-${agent}-status.txt" | cut -d= -f2 2>/dev/null || echo 'unknown')
               if [ "$status" == "success" ]; then
                 echo "- ✅ **${agent}**: Success" >> report.md
               else
