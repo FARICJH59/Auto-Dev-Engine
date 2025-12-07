@@ -164,13 +164,15 @@ This document provides a comprehensive review of the Auto-Dev-Engine repository,
 **Resolution**: Fixed indentation:
 ```yaml
 # Before (incorrect):
-- uses: actions/setup-node@v3
-  with: node-version: '20'
+steps:
+  - uses: actions/setup-node@v3
+    with: node-version: '20'
 
 # After (correct):
-- uses: actions/setup-node@v3
-  with:
-    node-version: '20'
+steps:
+  - uses: actions/setup-node@v3
+    with:
+      node-version: '20'
 ```
 
 ## Strengths

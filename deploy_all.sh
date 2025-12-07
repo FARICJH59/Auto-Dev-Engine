@@ -93,7 +93,7 @@ npm test
 
 echo "🚀 Deploying to Vercel..."
 # Uncomment when ready to deploy:
-# npx vercel --token "$VERCEL_TOKEN" --prod --yes
+# npx vercel --token "$VERCEL_TOKEN" --prod
 
 echo "🚀 Deploying to Google Cloud Platform..."
 # Uncomment when ready to deploy:
