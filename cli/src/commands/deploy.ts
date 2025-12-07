@@ -3,6 +3,23 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as YAML from 'yaml';
 
+interface CloudRunConfig {
+  service?: string;
+  region?: string;
+  memory?: string;
+  cpu?: number | string;
+  runtime?: string;
+  minInstances?: number;
+  maxInstances?: number;
+}
+
+interface VercelConfig {
+  version?: number;
+  builds?: Array<{ src: string; use: string }>;
+  routes?: Array<{ src: string; dest: string }>;
+  project?: string;
+}
+
 export async function deployCommand(target: string) {
   console.log(`🚀 Deploying to ${target}...\n`);
 
@@ -26,11 +43,11 @@ async function deployCloudRun() {
 
   // Load cloudrun.yaml
   const manifestPath = path.join(process.cwd(), 'manifests', 'cloudrun.yaml');
-  let config: any = {};
+  let config: CloudRunConfig = {};
 
   try {
     const content = await fs.readFile(manifestPath, 'utf-8');
-    config = YAML.parse(content);
+    config = YAML.parse(content) as CloudRunConfig;
   } catch (error) {
     console.warn('⚠️  Could not load cloudrun.yaml, using defaults');
   }
@@ -67,7 +84,7 @@ async function deployVercel() {
 
   try {
     const content = await fs.readFile(vercelPath, 'utf-8');
-    const config = JSON.parse(content);
+    const config: VercelConfig = JSON.parse(content);
     console.log('Vercel config loaded:', config);
   } catch (error) {
     console.warn('⚠️  Could not load vercel.json');

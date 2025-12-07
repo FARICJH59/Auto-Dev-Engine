@@ -27,9 +27,32 @@ interface PipelineResult {
 
 /**
  * Get the project root directory
+ * Can be configured via PROJECT_ROOT environment variable
  */
 function getProjectRoot(): string {
-  return process.env.PROJECT_ROOT || path.join(process.cwd(), '..');
+  if (process.env.PROJECT_ROOT) {
+    return path.resolve(process.env.PROJECT_ROOT);
+  }
+  // Default to parent directory of orchestrator
+  return path.resolve(process.cwd(), '..');
+}
+
+/**
+ * Validate and sanitize agent name to prevent path traversal
+ */
+function validateAgentName(agent: string): string {
+  // Only allow alphanumeric characters, hyphens, and underscores
+  const sanitized = agent.replace(/[^a-zA-Z0-9_-]/g, '');
+  
+  if (sanitized !== agent) {
+    throw new Error(`Invalid agent name: ${agent}. Only alphanumeric, hyphens, and underscores are allowed.`);
+  }
+  
+  if (sanitized.length === 0 || sanitized.length > 50) {
+    throw new Error(`Agent name must be between 1 and 50 characters`);
+  }
+  
+  return sanitized;
 }
 
 /**
@@ -67,10 +90,13 @@ export async function runAgent(
   projectId: string,
   agent: string
 ): Promise<AgentResult> {
+  // Validate and sanitize agent name to prevent path traversal
+  const validatedAgent = validateAgentName(agent);
+  
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const logDir = path.join(getProjectRoot(), 'logs', timestamp);
-  const logFile = path.join(logDir, `${agent}.log`);
-  const statusFile = path.join(logDir, `${agent}.status`);
+  const logFile = path.join(logDir, `${validatedAgent}.log`);
+  const statusFile = path.join(logDir, `${validatedAgent}.status`);
 
   // Create log directory
   await fs.mkdir(logDir, { recursive: true });
@@ -80,20 +106,20 @@ export async function runAgent(
   const agentsConfig = manifests.agents?.agents || {};
 
   // Check if agent is enabled
-  if (agentsConfig[agent] && !agentsConfig[agent].enabled) {
+  if (agentsConfig[validatedAgent] && !agentsConfig[validatedAgent].enabled) {
     const result: AgentResult = {
       status: 'skipped',
       output: 'Agent is disabled in configuration',
       timestamp
     };
     await fs.writeFile(statusFile, 'skipped');
-    logger.info(`Agent ${agent} skipped (disabled)`);
+    logger.info(`Agent ${validatedAgent} skipped (disabled)`);
     return result;
   }
 
   // Execute agent
-  // Look for agents in parent directory (project root) or current directory
-  const agentPath = path.join(getProjectRoot(), 'agents', agent, `${agent}-agent.js`);
+  // Use validated agent name in path construction
+  const agentPath = path.join(getProjectRoot(), 'agents', validatedAgent, `${validatedAgent}-agent.js`);
 
   return new Promise((resolve) => {
     let output = '';
@@ -104,7 +130,7 @@ export async function runAgent(
         ...process.env,
         TENANT_ID: tenantId,
         PROJECT_ID: projectId,
-        AGENT_NAME: agent
+        AGENT_NAME: validatedAgent
       }
     });
 
@@ -129,7 +155,7 @@ export async function runAgent(
       await fs.writeFile(logFile, `${output}\n${error}`);
       await fs.writeFile(statusFile, status);
 
-      logger.info(`Agent ${agent} completed`, { status, code });
+      logger.info(`Agent ${validatedAgent} completed`, { status, code });
       resolve(result);
     });
 
@@ -143,7 +169,7 @@ export async function runAgent(
       await fs.writeFile(logFile, err.message);
       await fs.writeFile(statusFile, 'failed');
 
-      logger.error(`Agent ${agent} error`, { error: err });
+      logger.error(`Agent ${validatedAgent} error`, { error: err });
       resolve(result);
     });
   });
