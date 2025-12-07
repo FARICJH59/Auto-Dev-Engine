@@ -1,0 +1,48 @@
+sequenceDiagram
+    participant GH as GitHub Actions
+    participant O as Orchestrator
+    participant LSAS as LSAS Agent
+    participant Pulse as Pulse Agent
+    participant Parso as Parso Agent
+    participant Gemini as Gemini Agent
+    participant R as Results Store
+    
+    Note over GH,R: Phase 1: Initialization
+    GH->>O: Trigger workflow
+    O->>O: Initialize logging
+    O->>O: Load configuration
+    
+    Note over GH,R: Phase 2: Parallel Execution
+    par Execute Agents in Parallel
+        O->>LSAS: Start analysis
+        LSAS->>LSAS: Detect languages
+        LSAS->>LSAS: Run static analysis
+        LSAS->>R: Save LSAS report
+    and
+        O->>Pulse: Start monitoring
+        Pulse->>Pulse: Collect metrics
+        Pulse->>Pulse: Analyze performance
+        Pulse->>R: Save Pulse report
+    and
+        O->>Parso: Start parsing
+        Parso->>Parso: Discover files
+        Parso->>Parso: Parse syntax
+        Parso->>R: Save Parso report
+    and
+        O->>Gemini: Start AI analysis
+        Gemini->>Gemini: Analyze repository
+        Gemini->>Gemini: Generate insights
+        Gemini->>R: Save Gemini report
+    end
+    
+    Note over GH,R: Phase 3: Aggregation & Reporting
+    R->>O: Return all results
+    O->>O: Generate summary report
+    O->>GH: Upload artifacts
+    GH->>GH: Update status tracking
+    
+    Note over GH,R: Optional: Deployment
+    alt If main branch
+        GH->>GH: Deploy to Cloud Run
+        GH->>GH: Deploy to Vercel
+    end

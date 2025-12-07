@@ -1,59 +1,255 @@
-<header>
+# Auto-Dev-Engine
 
-# Hello GitHub Actions
+**Intelligent Multi-Agent System for Automated Development Workflows**
 
-_Create and run a GitHub Actions workflow._
+[![Multi-Agent System Execution](https://github.com/FARICJH59/Auto-Dev-Engine/actions/workflows/run-agents.yml/badge.svg)](https://github.com/FARICJH59/Auto-Dev-Engine/actions/workflows/run-agents.yml)
+[![Mermaid Architecture Integration](https://github.com/FARICJH59/Auto-Dev-Engine/actions/workflows/mermaid-integration.yml/badge.svg)](https://github.com/FARICJH59/Auto-Dev-Engine/actions/workflows/mermaid-integration.yml)
 
-</header>
+## Overview
 
-## Step 1: Create a workflow file
+Auto-Dev-Engine is a sophisticated multi-agent system that automates code analysis, performance monitoring, syntax optimization, and AI-powered development workflows. The system implements a three-phase architecture with parallel execution capabilities and comprehensive reporting.
 
-_Welcome to "Hello GitHub Actions"! :wave:_
+## 🤖 Multi-Agent System
 
-**What is _GitHub Actions_?**: GitHub Actions is a flexible way to automate nearly every aspect of your team's software workflow. You can automate testing, continuously deploy, review code, manage issues and pull requests, and much more. The best part, these workflows are stored as code in your repository and easily shared and reused across teams. To learn more, check out these resources:
+The system consists of four specialized agents working in parallel:
 
-- The GitHub Actions feature page, see [GitHub Actions](https://github.com/features/actions).
-- The "GitHub Actions" user documentation, see [GitHub Actions](https://docs.github.com/actions).
+### 1. **LSAS** (Language-Specific Analysis System)
+- Automated language detection
+- Static code analysis
+- Pattern recognition
+- Issue identification
 
-**What is a _workflow_?**: A workflow is a configurable automated process that will run one or more jobs. Workflows are defined in special files in the `.github/workflows` directory and they execute based on your chosen event. For this exercise, we'll use a `pull_request` event.
+### 2. **Pulse** (Performance and Usage Logging)
+- Real-time system monitoring
+- Resource utilization tracking (CPU, Memory, Disk)
+- Performance analysis
+- Health status reporting
 
-- To read more about workflows, jobs, and events, see "[Understanding GitHub Actions](https://docs.github.com/en/actions/learn-github-actions/understanding-github-actions)".
-- If you want to learn more about the `pull_request` event before using it, see "[pull_request](https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request)".
+### 3. **Parso** (Parser and Syntax Optimization)
+- Python AST parsing
+- Syntax validation
+- Code structure analysis
+- Complexity metrics
 
-To get you started, we ran an Actions workflow in your new repository that, among other things, created a branch for you to work in, called `welcome-workflow`.
+### 4. **Gemini** (AI-Powered Analysis)
+- Repository structure analysis
+- AI-driven insights
+- Code quality assessment
+- Actionable recommendations
 
-### :keyboard: Activity: Create a workflow file
+## 🏗️ Architecture
 
-1. Open a new browser tab, and navigate to this same repository. Then, work on the steps in your second tab while you read the instructions in this tab.
-1. Create a pull request. This will contain all of the changes you'll make throughout this part of the course.
+The system implements a three-phase architecture:
 
-   Click the **Pull Requests** tab, click **New pull request**, set `base: main` and `compare:welcome-workflow`, click **Create pull request**, then click **Create pull request** again.
+```
+Phase 1: Agent Infrastructure
+  ├── Agent initialization
+  ├── Configuration loading
+  └── Logging setup
 
-1. Navigate to the **Code** tab.
-1. From the **main** branch dropdown, click on the **welcome-workflow** branch.
-1. Navigate to the `.github/workflows/` folder, then select **Add file** and click on **Create new file**.
-1. In the **Name your file** field, enter `welcome.yml`.
-1. Add the following content to the `welcome.yml` file:
+Phase 2: Parallel Execution
+  ├── Matrix strategy (GitHub Actions)
+  ├── Concurrent agent processing
+  └── Result aggregation
 
-   ```yaml copy
-   name: Post welcome comment
-   on:
-     pull_request:
-       types: [opened]
-   permissions:
-     pull-requests: write
-   ```
+Phase 3: Integration & Deployment
+  ├── Report generation
+  ├── Artifact handling
+  ├── Status tracking
+  └── Cloud deployment (Cloud Run + Vercel)
+```
 
-1. To commit your changes, click **Commit changes**.
-1. Type a commit message, select **Commit directly to the welcome-workflow branch** and click **Commit changes**.
-1. Wait about 20 seconds, then refresh this page (the one you're following instructions from). A separate Actions workflow in the repository (not the workflow you created) will run and will automatically replace the contents of this README file with instructions for the next step.
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed documentation.
 
-<footer>
+## 📊 Architecture Diagrams
+
+### System Architecture
+![Architecture Diagram](docs/architecture.png)
+
+### Workflow Sequence
+![Workflow Diagram](docs/workflow.png)
+
+### Phase Flow
+![Phase Flow Diagram](docs/phase-flow.png)
+
+*Diagrams are automatically generated from Mermaid source files in `docs/`*
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Python 3.11+
+- pip package manager
+- Git
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/FARICJH59/Auto-Dev-Engine.git
+cd Auto-Dev-Engine
+```
+
+2. Install dependencies:
+```bash
+pip install -r agents/requirements.txt
+```
+
+3. Run individual agents:
+```bash
+# Run LSAS agent
+python agents/lsas/lsas_agent.py
+
+# Run Pulse agent
+python agents/pulse/pulse_agent.py
+
+# Run Parso agent
+python agents/parso/parso_agent.py
+
+# Run Gemini agent
+python agents/gemini/gemini_agent.py
+```
+
+4. Run all agents in parallel:
+```bash
+cd agents
+python run_all_agents.py
+```
+
+## 📋 Agent Reports
+
+Each agent generates a JSON report with detailed findings:
+
+- `lsas_report.json` - Language analysis results
+- `pulse_report.json` - Performance metrics
+- `parso_report.json` - Syntax parsing results
+- `gemini_report.json` - AI-powered insights
+- `orchestration_report.json` - Aggregated results
+
+## 🔄 GitHub Actions Workflows
+
+### run-agents.yml
+Automated agent execution with matrix strategy:
+- **Triggers**: Push, PR, Schedule (daily), Manual
+- **Features**:
+  - Parallel execution using matrix strategy
+  - Individual agent isolation
+  - Artifact generation and upload
+  - Status tracking and reporting
+  - Deployment to Cloud Run and Vercel (main branch)
+
+### mermaid-integration.yml
+Documentation and diagram generation:
+- **Triggers**: Push to docs/, agents/, workflows/
+- **Features**:
+  - Mermaid diagram generation (PNG/SVG)
+  - Syntax validation
+  - Automatic documentation updates
+  - Architecture report generation
+
+## 🛠️ Configuration
+
+### Environment Variables
+
+Set the following secrets in your GitHub repository:
+
+```yaml
+GEMINI_API_KEY       # Gemini AI API key
+VERCEL_TOKEN         # Vercel deployment token
+GCP_PROJECT_ID       # Google Cloud project ID
+GCP_REGION          # GCP deployment region
+GCP_SA_KEY          # GCP service account key
+```
+
+## 📦 Project Structure
+
+```
+Auto-Dev-Engine/
+├── agents/
+│   ├── lsas/
+│   │   └── lsas_agent.py
+│   ├── pulse/
+│   │   └── pulse_agent.py
+│   ├── parso/
+│   │   └── parso_agent.py
+│   ├── gemini/
+│   │   └── gemini_agent.py
+│   ├── run_all_agents.py
+│   └── requirements.txt
+├── .github/
+│   └── workflows/
+│       ├── run-agents.yml
+│       ├── mermaid-integration.yml
+│       └── main.yml
+├── docs/
+│   ├── architecture.mmd
+│   ├── workflow.mmd
+│   ├── phase-flow.mmd
+│   └── ARCHITECTURE.md
+├── README.md
+└── LICENSE
+```
+
+## 🔍 Features
+
+### ✅ Implemented (Phases 1-3)
+
+- [x] Agent directories and executable scripts
+- [x] Comprehensive logging system
+- [x] Status tracking and reporting
+- [x] GitHub Actions matrix strategy
+- [x] Parallel execution support
+- [x] Artifact handling and upload
+- [x] Mermaid architecture diagrams
+- [x] Documentation integration
+- [x] Cloud Run deployment placeholder
+- [x] Vercel deployment placeholder
+
+### 🚧 Future Enhancements
+
+- [ ] Database integration for historical tracking
+- [ ] Real-time dashboard
+- [ ] Advanced AI model integration
+- [ ] Custom agent plugins
+- [ ] WebSocket-based live updates
+- [ ] Multi-repository support
+
+## 📖 Documentation
+
+- **Architecture**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- **Workflows**: See [.github/workflows/](.github/workflows/)
+- **Diagrams**: See [docs/](docs/) directory
+- **Agent Documentation**: See individual agent source files
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for guidelines on adding new agents or modifying workflows.
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- GitHub Actions for CI/CD automation
+- Mermaid for architecture diagrams
+- Python community for excellent libraries
+- Google Gemini for AI capabilities
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/FARICJH59/Auto-Dev-Engine/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/FARICJH59/Auto-Dev-Engine/discussions)
 
 ---
 
-Get help: [Post in our discussion board](https://github.com/orgs/skills/discussions/categories/hello-github-actions) &bull; [Review the GitHub status page](https://www.githubstatus.com/)
-
-&copy; 2023 GitHub &bull; [Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/code_of_conduct.md) &bull; [MIT License](https://gh.io/mit)
-
-</footer>
+**Version**: 1.0.0  
+**Last Updated**: 2025-12-07  
+**Status**: Production Ready ✅

@@ -1,0 +1,210 @@
+name: Mermaid Architecture Integration
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'docs/**'
+      - 'agents/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  # Generate Mermaid diagrams
+  generate-diagrams:
+    name: Generate Architecture Diagrams
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Mermaid CLI
+        run: |
+          npm install -g @mermaid-js/mermaid-cli
+
+      - name: Verify Mermaid files exist
+        run: |
+          if [ ! -d "docs" ]; then
+            mkdir -p docs
+          fi
+          if [ ! -f "docs/architecture.mmd" ]; then
+            echo "Architecture diagram not found, will be created"
+          fi
+
+      - name: Generate PNG diagrams
+        run: |
+          if [ -f "docs/architecture.mmd" ]; then
+            mmdc -i docs/architecture.mmd -o docs/architecture.png -t dark -b transparent
+            echo "✓ Generated architecture.png"
+          fi
+          if [ -f "docs/workflow.mmd" ]; then
+            mmdc -i docs/workflow.mmd -o docs/workflow.png -t dark -b transparent
+            echo "✓ Generated workflow.png"
+          fi
+
+      - name: Generate SVG diagrams
+        run: |
+          if [ -f "docs/architecture.mmd" ]; then
+            mmdc -i docs/architecture.mmd -o docs/architecture.svg -t dark -b transparent
+            echo "✓ Generated architecture.svg"
+          fi
+
+      - name: Upload diagram artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mermaid-diagrams
+          path: |
+            docs/*.png
+            docs/*.svg
+            docs/*.mmd
+          retention-days: 90
+
+  # Validate Mermaid syntax
+  validate-mermaid:
+    name: Validate Mermaid Syntax
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        diagram: [architecture, workflow, phase-flow]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Mermaid CLI
+        run: npm install -g @mermaid-js/mermaid-cli
+
+      - name: Validate ${{ matrix.diagram }} diagram
+        run: |
+          if [ -f "docs/${{ matrix.diagram }}.mmd" ]; then
+            echo "Validating ${{ matrix.diagram }}.mmd..."
+            mmdc -i docs/${{ matrix.diagram }}.mmd -o /tmp/${{ matrix.diagram }}.svg
+            echo "✓ ${{ matrix.diagram }}.mmd is valid"
+          else
+            echo "⚠️ docs/${{ matrix.diagram }}.mmd not found, skipping"
+          fi
+        continue-on-error: true
+
+  # Update documentation
+  update-docs:
+    name: Update Documentation
+    runs-on: ubuntu-latest
+    needs: generate-diagrams
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download diagram artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: mermaid-diagrams
+          path: docs
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if [ -n "$(git status --porcelain docs/)" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/
+          git commit -m "Update Mermaid diagrams [skip ci]"
+          git push
+
+  # Generate architecture report
+  architecture-report:
+    name: Generate Architecture Report
+    runs-on: ubuntu-latest
+    needs: [generate-diagrams, validate-mermaid]
+    if: always()
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download diagrams
+        uses: actions/download-artifact@v4
+        with:
+          name: mermaid-diagrams
+          path: docs
+        continue-on-error: true
+
+      - name: Generate report
+        run: |
+          cat > architecture-report.md << 'EOF'
+          # Architecture Documentation Report
+
+          **Generated**: $(date -u)
+          **Workflow Run**: ${{ github.run_number }}
+          **Branch**: ${{ github.ref_name }}
+
+          ## Diagrams Status
+
+          | Diagram | Status | Format |
+          |---------|--------|--------|
+          EOF
+
+          for file in docs/*.mmd; do
+            if [ -f "$file" ]; then
+              name=$(basename "$file" .mmd)
+              echo "| $name | ✓ Available | Mermaid |" >> architecture-report.md
+              if [ -f "docs/$name.png" ]; then
+                echo "| $name | ✓ Generated | PNG |" >> architecture-report.md
+              fi
+              if [ -f "docs/$name.svg" ]; then
+                echo "| $name | ✓ Generated | SVG |" >> architecture-report.md
+              fi
+            fi
+          done
+
+          cat >> architecture-report.md << 'EOF'
+
+          ## Multi-Agent System Overview
+
+          The architecture consists of four primary agents:
+
+          1. **LSAS** - Language-Specific Analysis System
+          2. **Pulse** - Performance and Usage Logging
+          3. **Parso** - Parser and Syntax Optimization
+          4. **Gemini** - AI-Powered Analysis and Generation
+
+          All agents execute in parallel and generate individual reports.
+          EOF
+
+      - name: Upload architecture report
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-report
+          path: architecture-report.md
+          retention-days: 90
+
+      - name: Add report to summary
+        if: always()
+        run: |
+          if [ -f architecture-report.md ]; then
+            cat architecture-report.md >> $GITHUB_STEP_SUMMARY
+          fi

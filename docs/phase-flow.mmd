@@ -1,0 +1,65 @@
+flowchart TD
+    Start([Start Multi-Agent System]) --> Phase1{Phase 1: Setup}
+    
+    Phase1 --> P1A[Create Agent Directories]
+    Phase1 --> P1B[Install Dependencies]
+    Phase1 --> P1C[Configure Logging]
+    
+    P1A --> P1Check{Phase 1 Complete?}
+    P1B --> P1Check
+    P1C --> P1Check
+    
+    P1Check -->|Yes| Phase2{Phase 2: Execution}
+    P1Check -->|No| P1Error[Report Setup Error]
+    
+    Phase2 --> P2A[Matrix Strategy]
+    P2A --> P2A1[Run LSAS Agent]
+    P2A --> P2A2[Run Pulse Agent]
+    P2A --> P2A3[Run Parso Agent]
+    P2A --> P2A4[Run Gemini Agent]
+    
+    P2A1 --> P2B[Collect Results]
+    P2A2 --> P2B
+    P2A3 --> P2B
+    P2A4 --> P2B
+    
+    P2B --> P2Check{All Agents Complete?}
+    P2Check -->|Yes| Phase3{Phase 3: Integration}
+    P2Check -->|Some Failed| P2Partial[Continue with Partial Results]
+    P2Check -->|All Failed| P2Error[Report Execution Error]
+    
+    P2Partial --> Phase3
+    
+    Phase3 --> P3A[Aggregate Reports]
+    Phase3 --> P3B[Generate Artifacts]
+    Phase3 --> P3C[Update Status]
+    Phase3 --> P3D[Create Documentation]
+    
+    P3A --> P3Check{Integration Complete?}
+    P3B --> P3Check
+    P3C --> P3Check
+    P3D --> P3Check
+    
+    P3Check -->|Yes| Deploy{Deploy?}
+    P3Check -->|No| P3Error[Report Integration Error]
+    
+    Deploy -->|Main Branch| D1[Deploy to Cloud Run]
+    Deploy -->|Main Branch| D2[Deploy to Vercel]
+    Deploy -->|Other Branch| Skip[Skip Deployment]
+    
+    D1 --> End([End])
+    D2 --> End
+    Skip --> End
+    P1Error --> End
+    P2Error --> End
+    P3Error --> End
+    
+    style Start fill:#4caf50,stroke:#2e7d32,color:#fff
+    style Phase1 fill:#2196f3,stroke:#1565c0,color:#fff
+    style Phase2 fill:#ff9800,stroke:#e65100,color:#fff
+    style Phase3 fill:#9c27b0,stroke:#6a1b9a,color:#fff
+    style Deploy fill:#00bcd4,stroke:#006064,color:#fff
+    style End fill:#4caf50,stroke:#2e7d32,color:#fff
+    style P1Error fill:#f44336,stroke:#c62828,color:#fff
+    style P2Error fill:#f44336,stroke:#c62828,color:#fff
+    style P3Error fill:#f44336,stroke:#c62828,color:#fff

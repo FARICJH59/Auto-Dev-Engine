@@ -1,0 +1,54 @@
+graph TB
+    subgraph "Multi-Agent System Architecture"
+        direction TB
+        
+        subgraph "Phase 1: Agent Infrastructure"
+            A[GitHub Repository] --> B[Agent Orchestrator]
+            B --> C1[LSAS Agent]
+            B --> C2[Pulse Agent]
+            B --> C3[Parso Agent]
+            B --> C4[Gemini Agent]
+        end
+        
+        subgraph "Phase 2: Agent Execution"
+            C1 --> D1[Language Analysis]
+            C2 --> D2[Performance Monitoring]
+            C3 --> D3[Syntax Parsing]
+            C4 --> D4[AI Analysis]
+            
+            D1 --> E1[LSAS Report]
+            D2 --> E2[Pulse Report]
+            D3 --> E3[Parso Report]
+            D4 --> E4[Gemini Report]
+        end
+        
+        subgraph "Phase 3: Results & Deployment"
+            E1 --> F[Aggregated Results]
+            E2 --> F
+            E3 --> F
+            E4 --> F
+            
+            F --> G1[GitHub Actions Artifacts]
+            F --> G2[Status Tracking]
+            F --> G3[Logging System]
+            
+            G1 --> H1[Cloud Run Deployment]
+            G1 --> H2[Vercel Deployment]
+        end
+    end
+    
+    subgraph "Workflows"
+        W1[run-agents.yml] --> B
+        W2[mermaid-integration.yml] --> I[Documentation]
+        I --> J[Architecture Diagrams]
+    end
+    
+    style A fill:#2e7d32,stroke:#1b5e20,color:#fff
+    style B fill:#1565c0,stroke:#0d47a1,color:#fff
+    style C1 fill:#6a1b9a,stroke:#4a148c,color:#fff
+    style C2 fill:#6a1b9a,stroke:#4a148c,color:#fff
+    style C3 fill:#6a1b9a,stroke:#4a148c,color:#fff
+    style C4 fill:#6a1b9a,stroke:#4a148c,color:#fff
+    style F fill:#c62828,stroke:#b71c1c,color:#fff
+    style H1 fill:#00695c,stroke:#004d40,color:#fff
+    style H2 fill:#00695c,stroke:#004d40,color:#fff
