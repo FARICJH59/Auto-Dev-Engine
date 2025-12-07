@@ -1,59 +1,227 @@
-<header>
+# Auto-Dev-Engine
 
-# Hello GitHub Actions
+**A comprehensive DevOps automation platform for orchestrating intelligent agents on Cloud Run and Vercel.**
 
-_Create and run a GitHub Actions workflow._
+![Phase 1 Complete](https://img.shields.io/badge/Phase%201-Complete-brightgreen)
+![Security](https://img.shields.io/badge/CodeQL-Passing-brightgreen)
+![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
 
-</header>
+## Overview
 
-## Step 1: Create a workflow file
+Auto-Dev-Engine is a DevOps orchestration platform that enables automated agent execution through a REST API and CLI interface. Built for cloud-native deployment on Google Cloud Run and Vercel, it provides a flexible framework for running custom agents with manifest-based configuration.
 
-_Welcome to "Hello GitHub Actions"! :wave:_
+## Phase 1 Features ✅
 
-**What is _GitHub Actions_?**: GitHub Actions is a flexible way to automate nearly every aspect of your team's software workflow. You can automate testing, continuously deploy, review code, manage issues and pull requests, and much more. The best part, these workflows are stored as code in your repository and easily shared and reused across teams. To learn more, check out these resources:
+- **REST API Orchestrator** - Express-based service with three endpoints (run, status, pipeline)
+- **CLI Tool** - Command-line interface with init, deploy, run, and pipeline commands
+- **Manifest System** - YAML-based configuration for projects, agents, and deployments
+- **GitHub Actions** - Matrix-based workflows for parallel agent execution
+- **Security** - Input validation, path traversal prevention, CodeQL verified
+- **Example Agents** - Four sample agents (lsas, pulse, parso, gemini)
 
-- The GitHub Actions feature page, see [GitHub Actions](https://github.com/features/actions).
-- The "GitHub Actions" user documentation, see [GitHub Actions](https://docs.github.com/actions).
+## Quick Start
 
-**What is a _workflow_?**: A workflow is a configurable automated process that will run one or more jobs. Workflows are defined in special files in the `.github/workflows` directory and they execute based on your chosen event. For this exercise, we'll use a `pull_request` event.
+### Prerequisites
 
-- To read more about workflows, jobs, and events, see "[Understanding GitHub Actions](https://docs.github.com/en/actions/learn-github-actions/understanding-github-actions)".
-- If you want to learn more about the `pull_request` event before using it, see "[pull_request](https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request)".
+- Node.js 20+
+- npm
+- Google Cloud SDK (for Cloud Run deployment)
+- Vercel CLI (for Vercel deployment)
 
-To get you started, we ran an Actions workflow in your new repository that, among other things, created a branch for you to work in, called `welcome-workflow`.
+### Installation
 
-### :keyboard: Activity: Create a workflow file
+```bash
+# Clone the repository
+git clone https://github.com/FARICJH59/Auto-Dev-Engine.git
+cd Auto-Dev-Engine
 
-1. Open a new browser tab, and navigate to this same repository. Then, work on the steps in your second tab while you read the instructions in this tab.
-1. Create a pull request. This will contain all of the changes you'll make throughout this part of the course.
+# Install orchestrator dependencies
+cd orchestrator
+npm install
+npm run build
 
-   Click the **Pull Requests** tab, click **New pull request**, set `base: main` and `compare:welcome-workflow`, click **Create pull request**, then click **Create pull request** again.
+# Install CLI dependencies
+cd ../cli
+npm install
+npm run build
+```
 
-1. Navigate to the **Code** tab.
-1. From the **main** branch dropdown, click on the **welcome-workflow** branch.
-1. Navigate to the `.github/workflows/` folder, then select **Add file** and click on **Create new file**.
-1. In the **Name your file** field, enter `welcome.yml`.
-1. Add the following content to the `welcome.yml` file:
+### Usage
 
-   ```yaml copy
-   name: Post welcome comment
-   on:
-     pull_request:
-       types: [opened]
-   permissions:
-     pull-requests: write
-   ```
+#### Initialize a new project:
+```bash
+cd cli
+node bin/ade.js init
+```
 
-1. To commit your changes, click **Commit changes**.
-1. Type a commit message, select **Commit directly to the welcome-workflow branch** and click **Commit changes**.
-1. Wait about 20 seconds, then refresh this page (the one you're following instructions from). A separate Actions workflow in the repository (not the workflow you created) will run and will automatically replace the contents of this README file with instructions for the next step.
+#### Run an agent locally:
+```bash
+node bin/ade.js run lsas --tenant my-tenant --project my-project
+```
 
-<footer>
+#### Start the orchestrator:
+```bash
+cd orchestrator
+npm start
+# Server runs on http://localhost:8080
+```
+
+#### Test the API:
+```bash
+# Health check
+curl http://localhost:8080/health
+
+# Run an agent
+curl -X POST http://localhost:8080/run \
+  -H "Content-Type: application/json" \
+  -d '{"tenantId": "test", "projectId": "demo", "agent": "lsas"}'
+
+# Check agent status
+curl http://localhost:8080/status/lsas
+
+# Run a pipeline
+curl -X POST http://localhost:8080/pipeline/start \
+  -H "Content-Type: application/json" \
+  -d '{"tenantId": "test", "projectId": "demo", "pipeline": "ci", "agents": ["lsas", "pulse"]}'
+```
+
+## Documentation
+
+- **[PHASE1.md](PHASE1.md)** - Complete Phase 1 implementation details
+- **[SECURITY.md](SECURITY.md)** - Security measures and best practices
+- **[orchestrator/README.md](orchestrator/README.md)** - Orchestrator API documentation
+- **[cli/README.md](cli/README.md)** - CLI command reference
+
+## Architecture
+
+```
+Auto-Dev-Engine/
+├── orchestrator/        # Cloud Run service (Express + TypeScript)
+│   ├── src/
+│   │   ├── index.ts            # Server setup
+│   │   ├── router.ts           # REST endpoints
+│   │   └── agent-runner.ts     # Agent execution engine
+│   └── Dockerfile
+├── cli/                # Command-line interface
+│   ├── bin/ade.js
+│   └── src/commands/
+├── manifests/          # Configuration files
+│   ├── project.yaml
+│   ├── agents.yaml
+│   ├── cloudrun.yaml
+│   └── vercel.json
+├── agents/             # Agent implementations
+│   ├── lsas/
+│   ├── pulse/
+│   ├── parso/
+│   └── gemini/
+└── .github/workflows/  # GitHub Actions
+    ├── run-agents.yml
+    ├── deploy-cloudrun.yml
+    └── deploy-vercel.yml
+```
+
+## API Endpoints
+
+### `POST /run`
+Execute a single agent.
+```json
+{
+  "tenantId": "string",
+  "projectId": "string",
+  "agent": "string"
+}
+```
+
+### `GET /status/:agent`
+Get the status of the most recent agent execution.
+
+### `POST /pipeline/start`
+Execute multiple agents in sequence.
+```json
+{
+  "tenantId": "string",
+  "projectId": "string",
+  "pipeline": "string",
+  "agents": ["agent1", "agent2"]
+}
+```
+
+## CLI Commands
+
+- `ade init` - Initialize project structure
+- `ade deploy cloudrun` - Deploy to Google Cloud Run
+- `ade deploy vercel` - Deploy to Vercel
+- `ade run <agent>` - Execute an agent
+- `ade pipeline <name>` - Run a pipeline
+
+## Security
+
+All security measures documented in [SECURITY.md](SECURITY.md):
+- ✅ Input validation and sanitization
+- ✅ Path traversal prevention
+- ✅ Workflow permission hardening
+- ✅ CodeQL security scanning (0 alerts)
+
+## Deployment
+
+### Cloud Run
+```bash
+gcloud run deploy orchestrator \
+  --source ./orchestrator \
+  --region us-central1 \
+  --platform managed
+```
+
+### Vercel
+```bash
+vercel deploy --prod
+```
+
+## Creating Agents
+
+Agents are Node.js scripts that receive environment variables:
+
+```javascript
+#!/usr/bin/env node
+
+const tenantId = process.env.TENANT_ID;
+const projectId = process.env.PROJECT_ID;
+const agentName = process.env.AGENT_NAME;
+
+console.log(`[${agentName}] Starting...`);
+// Your agent logic here
+process.exit(0);  // 0 for success, non-zero for failure
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run security checks: Tests must pass and CodeQL must show 0 alerts
+5. Submit a pull request
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file
+
+## Roadmap
+
+### Phase 2 (Planned)
+- Authentication and authorization
+- Agent scheduling
+- Webhook support
+- Dashboard UI
+- Agent marketplace
+- Enhanced monitoring
+
+## Support
+
+- 📚 [Documentation](./PHASE1.md)
+- 🔒 [Security](./SECURITY.md)
+- 🐛 [Issues](https://github.com/FARICJH59/Auto-Dev-Engine/issues)
 
 ---
 
-Get help: [Post in our discussion board](https://github.com/orgs/skills/discussions/categories/hello-github-actions) &bull; [Review the GitHub status page](https://www.githubstatus.com/)
-
-&copy; 2023 GitHub &bull; [Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/code_of_conduct.md) &bull; [MIT License](https://gh.io/mit)
-
-</footer>
+**Built with ❤️ using Node.js, TypeScript, Express, and Cloud Run**
