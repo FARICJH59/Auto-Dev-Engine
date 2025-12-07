@@ -35,3 +35,22 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Agent generated files #
+#########################
+*_agent.log
+*_report.json
+orchestrator.log
+orchestration_report.json
+
+# Python #
+##########
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv

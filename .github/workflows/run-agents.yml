@@ -1,0 +1,191 @@
+name: Multi-Agent System Execution
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+jobs:
+  # Individual agent execution using matrix strategy
+  run-agents-matrix:
+    name: Run ${{ matrix.agent }} Agent
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        agent: [lsas, pulse, parso, gemini]
+      fail-fast: false  # Continue running other agents if one fails
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r agents/requirements.txt
+
+      - name: Run ${{ matrix.agent }} agent
+        id: run-agent
+        run: |
+          cd agents/${{ matrix.agent }}
+          python ${{ matrix.agent }}_agent.py
+        continue-on-error: true
+
+      - name: Upload agent logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.agent }}-logs
+          path: |
+            agents/${{ matrix.agent }}/${{ matrix.agent }}_agent.log
+            agents/${{ matrix.agent }}/*_report.json
+          retention-days: 30
+
+      - name: Check agent status
+        if: steps.run-agent.outcome == 'failure'
+        run: |
+          echo "::warning::${{ matrix.agent }} agent failed"
+          exit 1
+
+  # Parallel execution of all agents
+  run-all-agents:
+    name: Run All Agents (Parallel)
+    runs-on: ubuntu-latest
+    needs: run-agents-matrix
+    if: always()
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r agents/requirements.txt
+
+      - name: Run orchestrator
+        id: orchestrator
+        run: |
+          cd agents
+          python run_all_agents.py
+        continue-on-error: true
+
+      - name: Upload orchestration results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orchestration-results
+          path: |
+            agents/orchestrator.log
+            agents/orchestration_report.json
+            agents/lsas_report.json
+            agents/pulse_report.json
+            agents/parso_report.json
+            agents/gemini_report.json
+          retention-days: 30
+
+      - name: Generate status summary
+        if: always()
+        run: |
+          echo "## Multi-Agent Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f agents/orchestration_report.json ]; then
+            echo "### Results" >> $GITHUB_STEP_SUMMARY
+            python -c "
+          import json
+          with open('agents/orchestration_report.json', 'r') as f:
+              report = json.load(f)
+              summary = report.get('summary', {})
+              print(f\"- **Total Agents**: {summary.get('total_agents', 0)}\")
+              print(f\"- **Successful**: {summary.get('successful', 0)}\")
+              print(f\"- **Failed**: {summary.get('failed', 0)}\")
+              print(f\"- **Execution Time**: {summary.get('execution_time', 0):.2f}s\")
+          " >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Orchestration report not found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Status tracking and reporting
+  status-tracking:
+    name: Track Agent Status
+    runs-on: ubuntu-latest
+    needs: [run-agents-matrix, run-all-agents]
+    if: always()
+    permissions:
+      contents: read
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Generate status report
+        run: |
+          echo "# Agent Status Report" > status_report.md
+          echo "**Workflow Run**: ${{ github.run_number }}" >> status_report.md
+          echo "**Timestamp**: $(date -u)" >> status_report.md
+          echo "" >> status_report.md
+          echo "## Artifacts Generated" >> status_report.md
+          find artifacts -type f -name "*.json" -o -name "*.log" | while read file; do
+            echo "- \`$file\`" >> status_report.md
+          done
+
+      - name: Upload status report
+        uses: actions/upload-artifact@v4
+        with:
+          name: status-report
+          path: status_report.md
+          retention-days: 90
+
+  # Deploy agents (placeholder)
+  deploy-agents:
+    name: Deploy Agents
+    runs-on: ubuntu-latest
+    needs: run-all-agents
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to Cloud Run (Placeholder)
+        run: |
+          echo "Deploying agents to Google Cloud Run..."
+          echo "GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}"
+          echo "GCP_REGION: ${{ secrets.GCP_REGION }}"
+          # Actual deployment commands would go here
+          echo "✓ Deployment placeholder executed"
+
+      - name: Deploy to Vercel (Placeholder)
+        run: |
+          echo "Deploying to Vercel..."
+          echo "VERCEL_TOKEN configured: ${{ secrets.VERCEL_TOKEN != '' }}"
+          # Actual deployment commands would go here
+          echo "✓ Vercel deployment placeholder executed"
