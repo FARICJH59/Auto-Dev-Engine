@@ -35,3 +35,16 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Agent artifacts #
+###################
+agent-*.log
+agent-*-status.txt
+report.md
+architecture-diagram.svg
+architecture-diagram.png
+
+# Node modules #
+################
+node_modules/
+package-lock.json

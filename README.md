@@ -1,10 +1,52 @@
 <header>
 
-# Hello GitHub Actions
+# Auto-Dev-Engine
 
-_Create and run a GitHub Actions workflow._
+_Multi-Agent Orchestration System with CI/CD Integration_
 
 </header>
+
+## 🚀 Overview
+
+Auto-Dev-Engine is a sophisticated multi-agent orchestration system that automates code analysis, monitoring, and deployment workflows. Built with GitHub Actions, it leverages specialized agents working in parallel to provide comprehensive insights into your codebase.
+
+### Key Features
+
+- 🤖 **Multi-Agent System**: Four specialized agents (LSAS, Pulse, Parso, Gemini) working in parallel
+- 📊 **Automated Reporting**: Real-time status updates and comprehensive execution reports
+- 🎨 **Visual Architecture**: Auto-generated Mermaid diagrams for system visualization
+- ☁️ **Cloud Integration**: Ready for Cloud Run and Vercel deployment
+- 📝 **Comprehensive Logging**: Detailed logs and artifacts for every execution
+
+## 📚 Quick Start
+
+### Running Agents
+
+**Via GitHub Actions:**
+1. Go to the "Actions" tab
+2. Select "Run Multi-Agent System"
+3. Click "Run workflow"
+
+**Locally:**
+```bash
+# Run individual agent
+bash agents/lsas/agent.sh
+
+# Run all agents
+for agent in lsas pulse parso gemini; do
+  bash agents/${agent}/agent.sh
+done
+```
+
+### Documentation
+
+- [**AGENTS_README.md**](AGENTS_README.md) - Complete agent documentation
+- [**IMPLEMENTATION_SUMMARY.md**](IMPLEMENTATION_SUMMARY.md) - Implementation details
+- [**architecture-diagram.mmd**](architecture-diagram.mmd) - System architecture
+
+---
+
+## GitHub Actions Tutorial
 
 ## Step 1: Create a workflow file
 
