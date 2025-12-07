@@ -24,8 +24,8 @@ This project serves as both a learning tool for beginners and a reference implem
 The repository uses a clever **self-updating tutorial system** that guides learners through 6 progressive steps:
 
 ```
-Step 0: Welcome → Step 1: Create Workflow → Step 2: Add Job → 
-Step 3: Add Actions → Step 4: Merge PR → Step 5: Test Workflow → Finish
+Step 0: Welcome → Step 1: Create Workflow → Step 2: Add Job → Step 3: Add Actions → 
+Step 4: Merge PR → Step 5: Test Workflow → Finish
 ```
 
 **How the automation works:**
@@ -131,13 +131,13 @@ If you want to use the deployment workflow for your own projects:
 
 Configure these in your repository settings (Settings → Secrets and variables → Actions):
 
-```
-VERCEL_TOKEN      - Your Vercel deployment token
-GCP_PROJECT_ID    - Google Cloud Platform project ID
-GCP_REGION        - GCP region for deployment
-GEMINI_API_KEY    - Google Gemini API key (if using AI features)
-GCP_SA_KEY        - GCP Service Account key (JSON format)
-```
+| Secret Name | Description |
+|-------------|-------------|
+| `VERCEL_TOKEN` | Your Vercel deployment token |
+| `GCP_PROJECT_ID` | Google Cloud Platform project ID |
+| `GCP_REGION` | GCP region for deployment (e.g., `us-central1`) |
+| `GEMINI_API_KEY` | Google Gemini API key (if using AI features) |
+| `GCP_SA_KEY` | GCP Service Account key (JSON format) |
 
 ⚠️ **Security Best Practices:**
 - **Never commit secrets** to your repository or expose them in logs
@@ -169,7 +169,7 @@ GCP_SA_KEY        - GCP Service Account key (JSON format)
 │   ├── 4-merge-your-pull-request.yml
 │   └── 5-trigger.yml
 ├── steps/             # Tutorial step content (markdown)
-│   ├── -step.txt     # Current step tracker
+│   ├── -step.txt     # Current step tracker (leading hyphen for sorting)
 │   ├── 0-welcome.md
 │   ├── 1-create-a-workflow.md
 │   ├── 2-add-a-job.md
