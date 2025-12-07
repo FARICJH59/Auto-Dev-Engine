@@ -1,0 +1,6 @@
+projectId: auto-dev-engine
+cloud:
+  primary: gcp
+  region: us-central1
+vercel:
+  project: auto-dev-engine-ui
