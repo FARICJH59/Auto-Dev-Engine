@@ -1,0 +1,111 @@
+name: Run Multi-Agent System
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'agents/**'
+      - '.github/workflows/run-agents.yml'
+
+jobs:
+  run-agents:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        agent: [lsas, pulse, parso, gemini]
+      fail-fast: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up environment
+        run: |
+          echo "Running agent: ${{ matrix.agent }}"
+          echo "Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+      - name: Run ${{ matrix.agent }} agent
+        id: run-agent
+        run: |
+          bash agents/${{ matrix.agent }}/agent.sh | tee agent-${{ matrix.agent }}.log
+        continue-on-error: true
+
+      - name: Upload agent logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agent-${{ matrix.agent }}-logs
+          path: agent-${{ matrix.agent }}.log
+          retention-days: 30
+
+      - name: Generate status report
+        if: always()
+        run: |
+          if [ '${{ steps.run-agent.outcome }}' == 'success' ]; then
+            echo "✅ Agent ${{ matrix.agent }} completed successfully"
+            echo "status=success" >> agent-${{ matrix.agent }}-status.txt
+          else
+            echo "❌ Agent ${{ matrix.agent }} failed"
+            echo "status=failed" >> agent-${{ matrix.agent }}-status.txt
+          fi
+
+      - name: Upload status report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agent-${{ matrix.agent }}-status
+          path: agent-${{ matrix.agent }}-status.txt
+          retention-days: 30
+
+  aggregate-results:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs: run-agents
+    if: always()
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Aggregate results
+        run: |
+          echo "# Multi-Agent System Execution Report" > report.md
+          echo "" >> report.md
+          echo "**Execution Time:** $(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> report.md
+          echo "" >> report.md
+          echo "## Agent Status Summary" >> report.md
+          echo "" >> report.md
+
+          for agent in lsas pulse parso gemini; do
+            if [ -f "artifacts/agent-${agent}-status/agent-${agent}-status.txt" ]; then
+              status=$(grep status "artifacts/agent-${agent}-status/agent-${agent}-status.txt" | cut -d= -f2 2>/dev/null || echo 'unknown')
+              if [ "$status" == "success" ]; then
+                echo "- ✅ **${agent}**: Success" >> report.md
+              else
+                echo "- ❌ **${agent}**: Failed" >> report.md
+              fi
+            else
+              echo "- ⚠️ **${agent}**: Status unknown" >> report.md
+            fi
+          done
+
+          echo "" >> report.md
+          echo "## Detailed Logs" >> report.md
+          echo "" >> report.md
+          echo "Check the artifacts for detailed logs from each agent." >> report.md
+
+          cat report.md
+
+      - name: Upload aggregate report
+        uses: actions/upload-artifact@v4
+        with:
+          name: execution-report
+          path: report.md
+          retention-days: 90
