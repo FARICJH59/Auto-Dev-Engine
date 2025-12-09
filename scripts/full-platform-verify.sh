@@ -168,14 +168,16 @@ fi
 section "Kubernetes Manifest Validation (kubeconform)"
 if command -v kubeconform &> /dev/null; then
   log_info "Running kubeconform..."
-  K8S_MANIFESTS=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/.github/workflows/*" | while read -r file; do
+  # Find Kubernetes manifests
+  K8S_MANIFESTS=()
+  while IFS= read -r -d '' file; do
     if grep -q "apiVersion:" "$file" 2>/dev/null; then
-      echo "$file"
+      K8S_MANIFESTS+=("$file")
     fi
-  done)
-  
-  if [[ -n "$K8S_MANIFESTS" ]]; then
-    echo "$K8S_MANIFESTS" | while read -r manifest; do
+  done < <(find . -type f \( -name "*.yml" -o -name "*.yaml" \) -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/.github/workflows/*" -print0)
+
+  if [[ ${#K8S_MANIFESTS[@]} -gt 0 ]]; then
+    for manifest in "${K8S_MANIFESTS[@]}"; do
       if [[ "$VERBOSE" == "true" ]]; then
         echo "  Validating: $manifest"
       fi

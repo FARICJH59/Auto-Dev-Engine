@@ -208,7 +208,7 @@ fi
 # Make all shell scripts executable
 section "Setting Script Permissions"
 
-for script in scripts/*.sh phase*/**/*.sh phase*/*.sh; do
+for script in scripts/*.sh phase*/**/*.sh; do
   if [[ -f "$script" ]]; then
     make_executable "$script"
   fi

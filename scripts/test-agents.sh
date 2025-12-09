@@ -73,33 +73,48 @@ echo "Testing Phase 2 Agents..."
 echo "---"
 
 if [[ -f "phase2/security-scanner.sh" ]]; then
+  # Security scanner may have warnings if tools aren't installed - check exit code
   if bash phase2/security-scanner.sh > /dev/null 2>&1; then
     log_pass "phase2/security-scanner.sh"
   else
-    # Security scanner may fail if tools aren't installed, but that's okay
-    log_pass "phase2/security-scanner.sh (completed with warnings)"
+    EXIT_CODE=$?
+    if [[ $EXIT_CODE -eq 127 ]] || bash phase2/security-scanner.sh 2>&1 | grep -q "not installed"; then
+      log_pass "phase2/security-scanner.sh (tools not available)"
+    else
+      log_fail "phase2/security-scanner.sh"
+    fi
   fi
 else
   log_skip "phase2/security-scanner.sh (not found)"
 fi
 
 if [[ -f "phase2/lint-checker.sh" ]]; then
+  # Lint checker may have warnings if tools aren't installed - check exit code
   if bash phase2/lint-checker.sh > /dev/null 2>&1; then
     log_pass "phase2/lint-checker.sh"
   else
-    # Lint checker may have warnings, that's acceptable
-    log_pass "phase2/lint-checker.sh (completed with warnings)"
+    EXIT_CODE=$?
+    if [[ $EXIT_CODE -eq 127 ]] || bash phase2/lint-checker.sh 2>&1 | grep -q "not installed"; then
+      log_pass "phase2/lint-checker.sh (tools not available)"
+    else
+      log_fail "phase2/lint-checker.sh"
+    fi
   fi
 else
   log_skip "phase2/lint-checker.sh (not found)"
 fi
 
 if [[ -f "phase2/test-runner.sh" ]]; then
+  # Test runner may not have tests - check if it's a real failure
   if bash phase2/test-runner.sh > /dev/null 2>&1; then
     log_pass "phase2/test-runner.sh"
   else
-    # Test runner may not have tests to run
-    log_pass "phase2/test-runner.sh (no tests found)"
+    EXIT_CODE=$?
+    if bash phase2/test-runner.sh 2>&1 | grep -qE "(no tests|not found|not available)"; then
+      log_pass "phase2/test-runner.sh (no tests available)"
+    else
+      log_fail "phase2/test-runner.sh"
+    fi
   fi
 else
   log_skip "phase2/test-runner.sh (not found)"

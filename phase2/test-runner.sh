@@ -17,7 +17,7 @@ if [[ -f "package.json" ]] && command -v npm &> /dev/null; then
 fi
 
 # Run Python tests
-if [[ -f "pytest.ini" ]] || [[ -f "setup.py" ]] && command -v pytest &> /dev/null; then
+if { [[ -f "pytest.ini" ]] || [[ -f "setup.py" ]]; } && command -v pytest &> /dev/null; then
   echo "Running Python tests..."
   pytest || echo "  Some Python tests failed"
 fi
