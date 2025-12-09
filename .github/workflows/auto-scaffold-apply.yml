@@ -1,0 +1,190 @@
+name: Auto Scaffold Apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run mode (preview changes without applying)'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      force_apply:
+        description: 'Force apply (creates backups of existing files)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      trigger_verification:
+        description: 'Trigger verification workflow after apply'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  apply-scaffold:
+    name: Apply Scaffold Templates
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Make scaffold script executable
+        run: chmod +x scripts/safe_apply_scaffold.sh
+      
+      - name: Apply scaffold (dry run)
+        if: github.event.inputs.dry_run == 'true'
+        run: |
+          echo "=== Running in DRY RUN mode ==="
+          ./scripts/safe_apply_scaffold.sh --dry-run
+      
+      - name: Apply scaffold (force)
+        if: github.event.inputs.dry_run == 'false' && github.event.inputs.force_apply == 'true'
+        run: |
+          echo "=== Applying scaffold with FORCE mode ==="
+          ./scripts/safe_apply_scaffold.sh --force
+      
+      - name: Apply scaffold (safe)
+        if: github.event.inputs.dry_run == 'false' && github.event.inputs.force_apply == 'false'
+        run: |
+          echo "=== Applying scaffold in SAFE mode ==="
+          ./scripts/safe_apply_scaffold.sh
+      
+      - name: Check for changes
+        id: check_changes
+        if: github.event.inputs.dry_run == 'false'
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected:"
+            git status --short
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected"
+          fi
+      
+      - name: Commit and push changes
+        if: github.event.inputs.dry_run == 'false' && steps.check_changes.outputs.changes == 'true'
+        run: |
+          git add .
+          git commit -m "Apply DevOps automation scaffold [skip ci]"
+          git push origin ${{ github.ref_name }}
+      
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "## Scaffold Application Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
+            echo "🔍 **Mode**: Dry Run (preview only)" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ github.event.inputs.force_apply }}" == "true" ]]; then
+            echo "⚡ **Mode**: Force Apply (with backups)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **Mode**: Safe Apply" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Files Applied:" >> $GITHUB_STEP_SUMMARY
+          echo "- Phase 1 agent scripts" >> $GITHUB_STEP_SUMMARY
+          echo "- Phase 2 agent scripts" >> $GITHUB_STEP_SUMMARY
+          echo "- Phase 3 agent scripts" >> $GITHUB_STEP_SUMMARY
+          echo "- Verification scripts" >> $GITHUB_STEP_SUMMARY
+          echo "- Documentation and diagrams" >> $GITHUB_STEP_SUMMARY
+  
+  trigger-verification:
+    name: Trigger Verification Workflow
+    runs-on: ubuntu-latest
+    needs: apply-scaffold
+    if: github.event.inputs.trigger_verification == 'true' && github.event.inputs.dry_run == 'false'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Trigger full platform validation
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'full-platform-ci-validation.yml',
+              ref: context.ref,
+              inputs: {
+                run_smoke_tests: 'false',
+                run_deployment_validation: 'false'
+              }
+            });
+            console.log('✅ Triggered full-platform-ci-validation workflow');
+      
+      - name: Add verification link to summary
+        run: |
+          echo "## Verification Triggered" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🚀 Full platform validation workflow has been triggered" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View progress at: https://github.com/${{ github.repository }}/actions/workflows/full-platform-ci-validation.yml" >> $GITHUB_STEP_SUMMARY
+  
+  report-collisions:
+    name: Report Scaffold Collisions
+    runs-on: ubuntu-latest
+    needs: apply-scaffold
+    if: always() && github.event.inputs.dry_run == 'false'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Check for scaffold collisions
+        id: check_collisions
+        run: |
+          SCAFFOLD_FILES=$(find . -name "*.scaffold" 2>/dev/null || true)
+          if [[ -n "$SCAFFOLD_FILES" ]]; then
+            echo "collisions=true" >> $GITHUB_OUTPUT
+            echo "files<<EOF" >> $GITHUB_OUTPUT
+            echo "$SCAFFOLD_FILES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "collisions=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Report collisions
+        if: steps.check_collisions.outputs.collisions == 'true'
+        run: |
+          echo "## ⚠️ Scaffold Collision Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The following scaffold backup files were created to prevent overwriting existing files:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.check_collisions.outputs.files }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Action Required:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review the \`.scaffold\` files to see new scaffold content" >> $GITHUB_STEP_SUMMARY
+          echo "2. Manually merge changes if desired" >> $GITHUB_STEP_SUMMARY
+          echo "3. Delete \`.scaffold\` files after review" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Report no collisions
+        if: steps.check_collisions.outputs.collisions == 'false'
+        run: |
+          echo "## ✅ No Collisions Detected" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All scaffold files were applied successfully without conflicts." >> $GITHUB_STEP_SUMMARY
