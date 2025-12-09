@@ -144,7 +144,8 @@ safe_apply_file() {
     fi
     
     # Ensure parent directory exists
-    local parent_dir=$(dirname "$target_file")
+    local parent_dir
+    parent_dir=$(dirname "$target_file")
     mkdir -p "$parent_dir"
     
     cp "$source_file" "$target_file"

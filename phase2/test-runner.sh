@@ -5,11 +5,8 @@ set -euo pipefail
 
 echo "=== Phase 2: Test Runner ==="
 
-# Run agent test harness if present
-if [[ -f "scripts/test-agents.sh" ]]; then
-  echo "Running agent test harness..."
-  bash scripts/test-agents.sh || echo "  Some agent tests failed"
-fi
+# Note: Agent test harness is run separately by full-platform-verify.sh
+# to avoid circular dependencies
 
 # Run Node.js tests
 if [[ -f "package.json" ]] && command -v npm &> /dev/null; then

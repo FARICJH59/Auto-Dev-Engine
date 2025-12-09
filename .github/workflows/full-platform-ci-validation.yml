@@ -32,13 +32,13 @@ jobs:
   validate-structure:
     name: Validate Platform Structure
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Validate directory structure
         run: |
           echo "=== Validating Directory Structure ==="
@@ -51,7 +51,7 @@ jobs:
               exit 1
             fi
           done
-      
+
       - name: Check for scaffold collisions
         run: |
           echo "=== Checking for Scaffold Collisions ==="
@@ -67,30 +67,30 @@ jobs:
     name: Lint and Validate Code
     runs-on: ubuntu-latest
     needs: validate-structure
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Install shellcheck
         run: |
           sudo apt-get update
           sudo apt-get install -y shellcheck
-      
+
       - name: Install yamllint
         run: |
           pip install yamllint
-      
+
       - name: Install kubeconform
         run: |
           curl -L https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
           sudo mv kubeconform /usr/local/bin/
-      
+
       - name: Make scripts executable
         run: |
           chmod +x scripts/*.sh
           find phase1 phase2 phase3 -name "*.sh" -exec chmod +x {} \;
-      
+
       - name: Run shellcheck
         run: |
           echo "=== Running shellcheck ==="
@@ -98,12 +98,12 @@ jobs:
             echo "Checking: $script"
             shellcheck "$script" || exit 1
           done
-      
+
       - name: Run yamllint
         run: |
           echo "=== Running yamllint ==="
           yamllint -d relaxed . || echo "YAML linting completed with warnings"
-      
+
       - name: Run kubeconform
         run: |
           echo "=== Running kubeconform ==="
@@ -116,35 +116,35 @@ jobs:
               kubeconform "$file" || echo "Validation issues in $file"
             fi
           done
-  
+
   dependency-check:
     name: Verify Dependencies
     runs-on: ubuntu-latest
     needs: validate-structure
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python
         if: hashFiles('requirements.txt') != ''
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      
+
       - name: Check Python dependencies
         if: hashFiles('requirements.txt') != ''
         run: |
           echo "=== Checking Python Dependencies ==="
           pip install -r requirements.txt
           pip check
-      
+
       - name: Set up Node.js
         if: hashFiles('package.json') != ''
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      
+
       - name: Check Node.js dependencies
         if: hashFiles('package.json') != ''
         run: |
@@ -156,37 +156,37 @@ jobs:
           fi
           npm install
           npm audit --audit-level=moderate || echo "npm audit completed"
-      
+
       - name: Set up Go
         if: hashFiles('go.mod') != ''
         uses: actions/setup-go@v5
         with:
           go-version: 'stable'
-      
+
       - name: Check Go dependencies
         if: hashFiles('go.mod') != ''
         run: |
           echo "=== Checking Go Dependencies ==="
           go mod verify
           go mod download
-  
+
   security-scan:
     name: Security Scanning
     runs-on: ubuntu-latest
     needs: lint-and-validate
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
-      
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -194,53 +194,53 @@ jobs:
           scan-ref: '.'
           format: 'sarif'
           output: 'trivy-results.sarif'
-      
+
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
-  
+
   generate-sbom:
     name: Generate SBOM
     runs-on: ubuntu-latest
     needs: validate-structure
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Install Syft
         run: |
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-      
+
       - name: Generate SBOM
         run: |
           echo "=== Generating SBOM ==="
           syft dir:. -o json > sbom.json
           echo "✓ SBOM generated: sbom.json"
-      
+
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@v4
         with:
           name: sbom
           path: sbom.json
           retention-days: 30
-  
+
   run-agents:
     name: Run Agent Tests
     runs-on: ubuntu-latest
     needs: [lint-and-validate, dependency-check]
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Make scripts executable
         run: |
           chmod +x scripts/*.sh
           find phase1 phase2 phase3 -name "*.sh" -exec chmod +x {} \;
-      
+
       - name: Run Phase 1 agents
         run: |
           echo "=== Running Phase 1 Agents ==="
@@ -250,7 +250,7 @@ jobs:
               bash "$agent"
             fi
           done
-      
+
       - name: Run Phase 2 agents
         run: |
           echo "=== Running Phase 2 Agents ==="
@@ -260,7 +260,7 @@ jobs:
               bash "$agent" || echo "Agent reported issues (non-critical)"
             fi
           done
-      
+
       - name: Run Phase 3 agents
         run: |
           echo "=== Running Phase 3 Agents ==="
@@ -270,16 +270,16 @@ jobs:
               bash "$agent" || echo "Agent completed with warnings"
             fi
           done
-  
+
   full-verification:
     name: Full Platform Verification
     runs-on: ubuntu-latest
     needs: [lint-and-validate, dependency-check, security-scan, generate-sbom, run-agents]
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Install verification tools
         run: |
           sudo apt-get update
@@ -287,10 +287,10 @@ jobs:
           pip install yamllint
           curl -L https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
           sudo mv kubeconform /usr/local/bin/
-      
+
       - name: Make verification script executable
         run: chmod +x scripts/full-platform-verify.sh
-      
+
       - name: Run full platform verification
         run: |
           ARGS=""
@@ -301,7 +301,7 @@ jobs:
             ARGS="$ARGS --deploy"
           fi
           ./scripts/full-platform-verify.sh $ARGS
-      
+
       - name: Display Mermaid diagram reference
         run: |
           echo "=== Agent Orchestration Diagram ==="
@@ -309,13 +309,13 @@ jobs:
           if [[ -f "docs/diagram.mmd" ]]; then
             echo "✓ Diagram file exists"
           fi
-  
+
   summary:
     name: Validation Summary
     runs-on: ubuntu-latest
     needs: full-verification
     if: always()
-    
+
     steps:
       - name: Generate summary
         run: |
