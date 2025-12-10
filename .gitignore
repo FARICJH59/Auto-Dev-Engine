@@ -43,3 +43,5 @@ deployment-meta.txt
 .env
 .env.vercel
 DEPLOYMENT_SUMMARY.md
+DEPLOYMENT_SUMMARY_*.md
+DEPLOYMENT_SUMMARY_*.pdf

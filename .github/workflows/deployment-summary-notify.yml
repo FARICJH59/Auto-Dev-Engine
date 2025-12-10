@@ -1,0 +1,95 @@
+name: Deployment Summary & Client Notifications (Centralized Branding)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-summary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main repository
+        uses: actions/checkout@v3
+
+      - name: Checkout client branding repository
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ secrets.CLIENT_BRANDING_REPO }}
+          path: client-branding
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Set up dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc jq tree curl imagemagick mailutils texlive-xetex
+
+      - name: Run deployment summary script
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          chmod +x ./generate-deployment-summary.sh
+          ./generate-deployment-summary.sh
+
+      - name: Fetch latest Vercel deployment URL
+        id: vercel
+        run: |
+          export VERCEL_TOKEN=${{ secrets.VERCEL_TOKEN }}
+          DEPLOYMENT_URL=$(vercel list --prod --token $VERCEL_TOKEN --limit 1 --json | jq -r '.[0].url')
+          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" > $GITHUB_ENV
+
+      - name: Generate branded PDFs for clients
+        run: |
+          IFS=',' read -ra CLIENTS <<< "${{ secrets.CLIENT_EMAILS }}"
+          for client in "${CLIENTS[@]}"; do
+            NAME=$(echo $client | cut -d'@' -f1)
+            LOGO_PATH="client-branding/logos/$NAME-logo.png"
+            NOTES_PATH="client-branding/notes/$NAME-notes.md"
+            COLOR_THEME="blue" # Optional, can extend to per-client colors
+            
+            # Merge notes if available
+            if [ -f $NOTES_PATH ]; then
+              pandoc DEPLOYMENT_SUMMARY.md $NOTES_PATH -V client_name=$NAME -o DEPLOYMENT_SUMMARY_$NAME.md
+            else
+              cp DEPLOYMENT_SUMMARY.md DEPLOYMENT_SUMMARY_$NAME.md
+            fi
+
+            # Convert to PDF with branding
+            pandoc DEPLOYMENT_SUMMARY_$NAME.md \
+              -V geometry:margin=1in \
+              -V colorlinks=true \
+              -V linkcolor=$COLOR_THEME \
+              --pdf-engine=xelatex \
+              --include-in-header <(echo "\n\includegraphics[width=3cm]{$LOGO_PATH}") \
+              -o DEPLOYMENT_SUMMARY_$NAME.pdf
+          done
+
+      - name: Upload PDF artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: deployment-summaries
+          path: DEPLOYMENT_SUMMARY_*.pdf
+
+      - name: Send Slack Notification
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-token: ${{ secrets.SLACK_TOKEN }}
+          text: 'Branded deployment summaries for ${{ github.repository }} are ready. Latest deployment: ${{ env.DEPLOYMENT_URL }}'
+
+      - name: Email Branded PDFs to Clients
+        run: |
+          IFS=',' read -ra CLIENTS <<< "${{ secrets.CLIENT_EMAILS }}"
+          for client in "${CLIENTS[@]}"; do
+            NAME=$(echo $client | cut -d'@' -f1)
+            echo "Hello $NAME,\n\nBranded deployment summary attached. Latest deployment: ${{ env.DEPLOYMENT_URL }}" | \
+            mail -s "Deployment Summary - ${{ github.repository }}" -a DEPLOYMENT_SUMMARY_$NAME.pdf $client
+          done
