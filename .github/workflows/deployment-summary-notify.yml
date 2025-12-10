@@ -8,6 +8,9 @@ on:
 jobs:
   deploy-summary:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     steps:
       - name: Checkout main repository
         uses: actions/checkout@v3
