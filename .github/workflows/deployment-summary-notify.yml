@@ -50,40 +50,49 @@ jobs:
         run: |
           IFS=',' read -ra CLIENTS <<< "${{ secrets.CLIENT_EMAILS }}"
           for client in "${CLIENTS[@]}"; do
-            NAME=$(echo $client | cut -d'@' -f1)
+            # Extract name before @ and sanitize for safe file paths
+            NAME=$(echo "$client" | sed 's/@.*//' | tr -cd '[:alnum:]_-')
+            
+            # Skip if name is empty after sanitization
+            if [ -z "$NAME" ]; then
+              echo "Warning: Skipping invalid client email: $client"
+              continue
+            fi
+            
             LOGO_PATH="client-branding/logos/$NAME-logo.png"
             NOTES_PATH="client-branding/notes/$NAME-notes.md"
             COLOR_THEME="blue" # Optional, can extend to per-client colors
             
             # Merge notes if available
-            if [ -f $NOTES_PATH ]; then
-              pandoc DEPLOYMENT_SUMMARY.md $NOTES_PATH -V client_name=$NAME -o DEPLOYMENT_SUMMARY_$NAME.md
+            if [ -f "$NOTES_PATH" ]; then
+              pandoc DEPLOYMENT_SUMMARY.md "$NOTES_PATH" -V client_name="$NAME" -o "DEPLOYMENT_SUMMARY_$NAME.md"
             else
-              cp DEPLOYMENT_SUMMARY.md DEPLOYMENT_SUMMARY_$NAME.md
+              cp DEPLOYMENT_SUMMARY.md "DEPLOYMENT_SUMMARY_$NAME.md"
             fi
 
             # Convert to PDF with branding
-            # Create temporary header file for logo inclusion
+            # Create temporary header file for logo inclusion with sanitized name
+            HEADER_FILE="header-${NAME}.tex"
             if [ -f "$LOGO_PATH" ]; then
-              cat > /tmp/header-$NAME.tex << EOF
+              cat > "$HEADER_FILE" << EOF
           \includegraphics[width=3cm]{$LOGO_PATH}
           EOF
-              pandoc DEPLOYMENT_SUMMARY_$NAME.md \
+              pandoc "DEPLOYMENT_SUMMARY_$NAME.md" \
                 -V geometry:margin=1in \
                 -V colorlinks=true \
-                -V linkcolor=$COLOR_THEME \
+                -V linkcolor="$COLOR_THEME" \
                 --pdf-engine=xelatex \
-                --include-in-header /tmp/header-$NAME.tex \
-                -o DEPLOYMENT_SUMMARY_$NAME.pdf
-              rm /tmp/header-$NAME.tex
+                --include-in-header "$HEADER_FILE" \
+                -o "DEPLOYMENT_SUMMARY_$NAME.pdf"
+              rm "$HEADER_FILE"
             else
               # Generate PDF without logo if logo file doesn't exist
-              pandoc DEPLOYMENT_SUMMARY_$NAME.md \
+              pandoc "DEPLOYMENT_SUMMARY_$NAME.md" \
                 -V geometry:margin=1in \
                 -V colorlinks=true \
-                -V linkcolor=$COLOR_THEME \
+                -V linkcolor="$COLOR_THEME" \
                 --pdf-engine=xelatex \
-                -o DEPLOYMENT_SUMMARY_$NAME.pdf
+                -o "DEPLOYMENT_SUMMARY_$NAME.pdf"
             fi
           done
 
@@ -102,7 +111,7 @@ jobs:
 
       - name: Email Branded PDFs to Clients
         uses: dawidd6/action-send-mail@v3
-        if: secrets.SMTP_SERVER != ''
+        if: ${{ secrets.SMTP_SERVER }}
         with:
           server_address: ${{ secrets.SMTP_SERVER }}
           server_port: ${{ secrets.SMTP_PORT }}
