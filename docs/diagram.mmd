@@ -1,0 +1,106 @@
+graph TB
+    Start([Start: DevOps Automation]) --> CheckGit{Git Repository?}
+    CheckGit -->|Yes| Phase1[Phase 1: Initialization]
+    CheckGit -->|No| Error1[Error: Not in Git Repo]
+    
+    Phase1 --> InitAgent[init-agent.sh]
+    Phase1 --> DepScanner[dependency-scanner.sh]
+    Phase1 --> StructVal[structure-validator.sh]
+    
+    InitAgent --> CheckDirs{Directories Exist?}
+    CheckDirs -->|No| CreateDirs[Create Required Dirs]
+    CheckDirs -->|Yes| Phase1Complete
+    CreateDirs --> Phase1Complete[Phase 1 Complete]
+    
+    DepScanner --> CheckPython{Python deps?}
+    DepScanner --> CheckNode{Node deps?}
+    DepScanner --> CheckGo{Go deps?}
+    CheckPython --> Phase1Complete
+    CheckNode --> Phase1Complete
+    CheckGo --> Phase1Complete
+    
+    StructVal --> ValidateFiles[Validate Structure]
+    ValidateFiles --> Phase1Complete
+    
+    Phase1Complete --> Phase2[Phase 2: Security & Testing]
+    
+    Phase2 --> SecScanner[security-scanner.sh]
+    Phase2 --> LintChecker[lint-checker.sh]
+    Phase2 --> TestRunner[test-runner.sh]
+    
+    SecScanner --> Gitleaks{Gitleaks Available?}
+    Gitleaks -->|Yes| RunGitleaks[Scan for Secrets]
+    Gitleaks -->|No| SkipGitleaks[Skip Secret Scan]
+    RunGitleaks --> Phase2Complete
+    SkipGitleaks --> Phase2Complete
+    
+    LintChecker --> ShellCheck{shellcheck?}
+    LintChecker --> YAMLLint{yamllint?}
+    LintChecker --> Kubeconform{kubeconform?}
+    ShellCheck --> Phase2Complete
+    YAMLLint --> Phase2Complete
+    Kubeconform --> Phase2Complete
+    
+    TestRunner --> RunTests[Execute Test Suites]
+    RunTests --> Phase2Complete[Phase 2 Complete]
+    
+    Phase2Complete --> Phase3[Phase 3: Build & Deploy]
+    
+    Phase3 --> DockerBuilder[docker-builder.sh]
+    Phase3 --> DeployValidator[deployment-validator.sh]
+    Phase3 --> SBOMGen[sbom-generator.sh]
+    
+    DockerBuilder --> BuildFlag{--smoke flag?}
+    BuildFlag -->|Yes| BuildDocker[Build Docker Image]
+    BuildFlag -->|No| SkipDocker[Skip Docker Build]
+    BuildDocker --> SmokeTests[Run Smoke Tests]
+    SmokeTests --> Phase3Complete
+    SkipDocker --> Phase3Complete
+    
+    DeployValidator --> DeployFlag{--deploy flag?}
+    DeployFlag -->|Yes| DryRun[Cloud Run Dry-Run]
+    DeployFlag -->|No| SkipDeploy[Skip Deployment]
+    DryRun --> Phase3Complete
+    SkipDeploy --> Phase3Complete
+    
+    SBOMGen --> SyftCheck{Syft Available?}
+    SyftCheck -->|Yes| GenSBOM[Generate SBOM]
+    SyftCheck -->|No| SkipSBOM[Skip SBOM]
+    GenSBOM --> Phase3Complete
+    SkipSBOM --> Phase3Complete[Phase 3 Complete]
+    
+    Phase3Complete --> Verification[Full Platform Verify]
+    
+    Verification --> GitCheck[Check Git Status]
+    Verification --> FileCheck[Validate File Structure]
+    Verification --> CollisionCheck[Detect Scaffold Collisions]
+    
+    GitCheck --> VerifyComplete
+    FileCheck --> VerifyComplete
+    CollisionCheck --> VerifyComplete
+    
+    VerifyComplete[Verification Complete] --> ReportGen[Generate Summary Report]
+    ReportGen --> Suggestions[Static Analysis Suggestions]
+    
+    Suggestions --> SuggestSyft[Suggest: Syft SBOM]
+    Suggestions --> SuggestGitleaks[Suggest: Gitleaks]
+    Suggestions --> SuggestShellcheck[Suggest: shellcheck]
+    Suggestions --> SuggestKubeconform[Suggest: kubeconform]
+    
+    SuggestSyft --> Complete
+    SuggestGitleaks --> Complete
+    SuggestShellcheck --> Complete
+    SuggestKubeconform --> Complete
+    
+    Complete([✓ Pipeline Complete])
+    
+    Error1 --> End([End])
+    Complete --> End
+    
+    style Start fill:#90EE90
+    style Complete fill:#90EE90
+    style Phase1 fill:#87CEEB
+    style Phase2 fill:#FFB6C1
+    style Phase3 fill:#DDA0DD
+    style Verification fill:#F0E68C
+    style Error1 fill:#FF6B6B

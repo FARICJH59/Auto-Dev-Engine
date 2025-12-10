@@ -1,0 +1,28 @@
+./
+├── LICENSE
+├── QUICK_START.md
+├── README.md
+├── SCAFFOLD_SUMMARY.md
+├── docs/
+│   ├── README.md
+│   └── diagram.mmd
+├── phase1/
+│   └── agents/
+│       ├── dependency-scanner.sh*
+│       ├── init-agent.sh*
+│       └── structure-validator.sh*
+├── phase2/
+│   ├── lint-checker.sh*
+│   ├── security-scanner.sh*
+│   └── test-runner.sh*
+├── phase3/
+│   ├── deployment-validator.sh*
+│   ├── docker-builder.sh*
+│   └── sbom-generator.sh*
+├── repo-tree.txt
+└── scripts/
+    ├── full-platform-verify.sh*
+    ├── safe_apply_scaffold.sh*
+    └── test-agents.sh*
+
+7 directories, 19 files
