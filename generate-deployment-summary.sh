@@ -84,44 +84,34 @@ vercel inspect "$DEPLOYMENT_ID" --meta > deployment-meta.txt
 # Generate deployment summary
 echo -e "${GREEN}Generating deployment summary...${NC}"
 
-# Read file contents and escape for heredoc
+# Read file contents
 TREE_CONTENT=$(cat repo-tree.txt)
 ENV_CONTENT=$(cat "$ENV_FILE")
 META_CONTENT=$(cat deployment-meta.txt)
 
-cat > DEPLOYMENT_SUMMARY.md << 'EOF_OUTER'
+# Generate the deployment summary directly with proper variable expansion
+cat > DEPLOYMENT_SUMMARY.md <<EOF
 ## Deployment Report
 
-Deployment URL: EOF_URL
-Deployment ID: EOF_ID
-Environment: EOF_ENV
+Deployment URL: $DEPLOYMENT_URL
+Deployment ID: $DEPLOYMENT_ID
+Environment: $DEPLOYMENT_ENV
 
 Repository Tree:
-```
-EOF_TREE
-```
+\`\`\`
+$TREE_CONTENT
+\`\`\`
 
 Environment Variables:
-```
-EOF_ENV_CONTENT
-```
+\`\`\`
+$ENV_CONTENT
+\`\`\`
 
 Deployment Metadata:
-```
-EOF_META
-```
-EOF_OUTER
-
-# Replace placeholders
-sed -i "s|EOF_URL|$DEPLOYMENT_URL|g" DEPLOYMENT_SUMMARY.md
-sed -i "s|EOF_ID|$DEPLOYMENT_ID|g" DEPLOYMENT_SUMMARY.md
-sed -i "s|EOF_ENV|$DEPLOYMENT_ENV|g" DEPLOYMENT_SUMMARY.md
-sed -i "/EOF_TREE/r repo-tree.txt" DEPLOYMENT_SUMMARY.md
-sed -i "/EOF_TREE/d" DEPLOYMENT_SUMMARY.md
-sed -i "/EOF_ENV_CONTENT/r $ENV_FILE" DEPLOYMENT_SUMMARY.md
-sed -i "/EOF_ENV_CONTENT/d" DEPLOYMENT_SUMMARY.md
-sed -i "/EOF_META/r deployment-meta.txt" DEPLOYMENT_SUMMARY.md
-sed -i "/EOF_META/d" DEPLOYMENT_SUMMARY.md
+\`\`\`
+$META_CONTENT
+\`\`\`
+EOF
 
 echo -e "${BLUE}Deployment summary generated: DEPLOYMENT_SUMMARY.md${NC}"
 
