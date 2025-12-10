@@ -81,14 +81,15 @@ The script generates the following files:
 
 - `repo-tree.txt` - Repository directory structure (up to 3 levels deep)
 - `deployment-meta.txt` - Raw deployment metadata from Vercel
-- `.env` - Environment variables from Vercel project
+- `.env` or `.env.vercel` - Environment variables from Vercel project (uses `.env.vercel` if `.env` already exists)
 
 **Important Security Notes:**
 - All generated files are excluded from Git via `.gitignore`
-- The `.env` file and `DEPLOYMENT_SUMMARY.md` may contain sensitive information (API keys, secrets, etc.)
+- The `.env`/`.env.vercel` file and `DEPLOYMENT_SUMMARY.md` may contain sensitive information (API keys, secrets, etc.)
 - **Never commit these files to version control**
 - Review the generated files before sharing them to ensure no sensitive data is exposed
 - Consider using a secure method to share deployment summaries if they contain sensitive information
+- The script will use `.env.vercel` instead of `.env` if an existing `.env` file is detected to prevent accidental overwrites
 
 ## Environment Variables
 

@@ -41,4 +41,5 @@ Thumbs.db
 repo-tree.txt
 deployment-meta.txt
 .env
+.env.vercel
 DEPLOYMENT_SUMMARY.md
