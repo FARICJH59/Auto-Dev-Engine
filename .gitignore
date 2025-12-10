@@ -35,3 +35,13 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Deployment summary generated files #
+#####################################
+repo-tree.txt
+deployment-meta.txt
+.env
+.env.vercel
+DEPLOYMENT_SUMMARY.md
+DEPLOYMENT_SUMMARY_*.md
+DEPLOYMENT_SUMMARY_*.pdf
