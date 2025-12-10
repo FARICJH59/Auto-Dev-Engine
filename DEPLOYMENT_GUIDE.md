@@ -83,7 +83,12 @@ The script generates the following files:
 - `deployment-meta.txt` - Raw deployment metadata from Vercel
 - `.env` - Environment variables from Vercel project
 
-**Note:** All generated files are excluded from Git via `.gitignore`.
+**Important Security Notes:**
+- All generated files are excluded from Git via `.gitignore`
+- The `.env` file and `DEPLOYMENT_SUMMARY.md` may contain sensitive information (API keys, secrets, etc.)
+- **Never commit these files to version control**
+- Review the generated files before sharing them to ensure no sensitive data is exposed
+- Consider using a secure method to share deployment summaries if they contain sensitive information
 
 ## Environment Variables
 
