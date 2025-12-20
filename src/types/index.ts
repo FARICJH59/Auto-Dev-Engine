@@ -13,13 +13,13 @@ export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'failed';
 
 export interface SimulationRequest {
   projectId: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, string | number | boolean>;
 }
 
 export interface DeploymentRequest {
   projectId: string;
   environment: 'development' | 'staging' | 'production';
-  config: Record<string, any>;
+  config: Record<string, string | number | boolean>;
 }
 
 export interface SDKGenerationRequest {
