@@ -4,17 +4,18 @@
 // Automatically injects org context headers via middleware
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireOrg, requireRole, hasMinimumRole } from '@/lib/org-context';
+import { requireOrg } from '@/lib/org-context';
 import { APIError } from '@/lib/errors';
+import type { Project } from '@/types/database';
 
 // GET /api/projects - List projects for organization
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const context = await requireOrg();
 
     // In production, this would call the backend API
     // For now, return mock data
-    const projects = [
+    const projects: Project[] = [
       // Mock projects would be fetched from backend here
       // const response = await apiClient<Project[]>('/projects');
     ];
@@ -44,7 +45,13 @@ export async function POST(request: NextRequest) {
     const context = await requireOrg();
 
     // Check if user has permission to create projects (admin or member)
-    if (!hasMinimumRole(context.orgRole, 'org:member')) {
+    const roleHierarchy: Record<string, number> = {
+      'org:admin': 3,
+      'org:member': 2,
+      'org:viewer': 1,
+    };
+    
+    if ((roleHierarchy[context.orgRole] || 0) < roleHierarchy['org:member']) {
       return NextResponse.json(
         { error: 'Insufficient permissions. Members or admins can create projects.' },
         { status: 403 }

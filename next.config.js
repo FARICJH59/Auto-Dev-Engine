@@ -1,8 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    allowedDevOrigins: ['http://10.1.10.223:3000'],
-  },
   reactStrictMode: true,
   poweredByHeader: false,
   images: {

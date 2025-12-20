@@ -1,18 +1,19 @@
 // Copilot: Dashboard home page
 // Shows welcome message, organization overview, and quick actions
 
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { clerkClient } from '@clerk/nextjs/server';
 import { requireOrg } from '@/lib/org-context';
 
 export default async function DashboardPage() {
   const context = await requireOrg();
   
   // Get user and organization details
-  const user = await clerkClient().users.getUser(context.userId);
-  const organization = await clerkClient().organizations.getOrganization({
+  const client = await clerkClient();
+  const user = await client.users.getUser(context.userId);
+  const organization = await client.organizations.getOrganization({
     organizationId: context.orgId,
   });
-  const memberships = await clerkClient().organizations.getOrganizationMembershipList({
+  const memberships = await client.organizations.getOrganizationMembershipList({
     organizationId: context.orgId,
   });
 
@@ -23,7 +24,7 @@ export default async function DashboardPage() {
           Welcome back, {user.firstName || 'User'}!
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Here's an overview of your organization and recent activity.
+          Here&apos;s an overview of your organization and recent activity.
         </p>
       </div>
 

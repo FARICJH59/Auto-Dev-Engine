@@ -15,7 +15,7 @@ export default async function ProjectsPage() {
             Projects
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Manage your organization's projects
+            Manage your organization&apos;s projects
           </p>
         </div>
         <button className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition">

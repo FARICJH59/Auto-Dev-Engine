@@ -5,8 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/org-context';
-import { clerkClient } from '@clerk/nextjs/server';
 import { APIError } from '@/lib/errors';
+import type { APIKeyMetadata } from '@/types/clerk';
 
 // POST /api/admin/api-keys - Create API key (admin only)
 export async function POST(request: NextRequest) {
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET /api/admin/api-keys - List API keys (admin only)
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Require admin role
     const context = await requireRole(['org:admin']);
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
     // });
 
     // Mock response
-    const apiKeys = [];
+    const apiKeys: APIKeyMetadata[] = [];
 
     return NextResponse.json({
       apiKeys,

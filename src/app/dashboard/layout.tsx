@@ -26,8 +26,9 @@ export default async function DashboardLayout({
   }
 
   // Get organization details
+  const client = await clerkClient();
   const organization = orgId
-    ? await clerkClient().organizations.getOrganization({ organizationId: orgId })
+    ? await client.organizations.getOrganization({ organizationId: orgId })
     : null;
 
   const isAdmin = orgRole === 'org:admin';

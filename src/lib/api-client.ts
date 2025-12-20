@@ -29,9 +29,9 @@ export async function apiClient<T>(
     throw new Error('NEXT_PUBLIC_API_URL not configured');
   }
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options?.headers,
+    ...(options?.headers as Record<string, string>),
   };
 
   // Inject organization context headers
@@ -46,7 +46,6 @@ export async function apiClient<T>(
   }
 
   // Get Clerk token
-  const tokenType = options?.acceptsToken || 'session';
   const token = await getToken();
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;

@@ -5,13 +5,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOrg } from '@/lib/org-context';
 import { APIError, QuotaExceededError } from '@/lib/errors';
+import type { Execution } from '@/types/database';
 
 // POST /api/executions - Create new execution
 export async function POST(request: NextRequest) {
   try {
     const context = await requireOrg();
     const body = await request.json();
-    const { projectId, config } = body;
+    const { projectId } = body;
 
     if (!projectId) {
       return NextResponse.json(
@@ -97,7 +98,7 @@ export async function GET(request: NextRequest) {
     // );
 
     // Mock response
-    const executions = [];
+    const executions: Execution[] = [];
 
     return NextResponse.json({
       executions,

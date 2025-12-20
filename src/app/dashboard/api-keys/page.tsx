@@ -7,7 +7,6 @@
 import { useState } from 'react';
 
 export default function APIKeysPage() {
-  const [showSecret, setShowSecret] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const copyToClipboard = (text: string, keyId: string) => {
@@ -93,7 +92,7 @@ export default function APIKeysPage() {
             </div>
             <div className="flex items-center space-x-2">
               <code className="flex-1 px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded font-mono text-sm">
-                {showSecret ? 'sk_test_1234567890abcdef' : '••••••••••••••••'}
+                ••••••••••••••••
               </code>
               <button
                 onClick={() => copyToClipboard('sk_test_1234567890abcdef', 'key-1')}

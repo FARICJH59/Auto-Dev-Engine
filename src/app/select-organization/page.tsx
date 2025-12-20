@@ -6,11 +6,10 @@ import { OrganizationList } from '@clerk/nextjs';
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
-export default async function SelectOrganizationPage({
-  searchParams,
-}: {
-  searchParams: { redirect_url?: string };
+export default async function SelectOrganizationPage(props: {
+  searchParams: Promise<{ redirect_url?: string }>;
 }) {
+  const searchParams = await props.searchParams;
   const { userId, orgId } = await auth();
 
   // Redirect to sign-in if not authenticated

@@ -5,7 +5,7 @@
 import { requireOrg } from '@/lib/org-context';
 
 export default async function ExecutionsPage() {
-  const context = await requireOrg();
+  await requireOrg();
 
   return (
     <div className="space-y-6">
