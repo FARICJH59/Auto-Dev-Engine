@@ -16,6 +16,8 @@ Use `create-github-app.mjs` to register the Brain Spark orchestrator app for you
    cp .env.example .env
    ```
 
+   Set `WEBHOOK_SECRET` to a strong, unique value for securing webhook delivery.
+
 2. Run the script:
 
    ```bash

@@ -30,13 +30,14 @@ const APP_NAME = process.env.APP_NAME || "brain-spark-orchestrator";
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
 const APP_URL = process.env.APP_URL || "https://brain-spark.io";
 const CALLBACK_URL = process.env.CALLBACK_URL || "https://brain-spark.io/callback";
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "supersecret123";
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
 function ensureConfig() {
   const missing = [
     ["GITHUB_ORG", ORG_NAME],
     ["GITHUB_PAT", PAT],
     ["WEBHOOK_URL", WEBHOOK_URL],
+    ["WEBHOOK_SECRET", WEBHOOK_SECRET],
   ].filter(([, value]) => !value);
 
   if (missing.length) {
