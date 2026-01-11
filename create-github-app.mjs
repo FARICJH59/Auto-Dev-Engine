@@ -24,7 +24,6 @@ function ensureConfig() {
 
   if (missing.length) {
     console.error("Missing required environment variables:", missing.map(([k]) => k).join(", "));
-    process.exitCode = 1;
     return false;
   }
 
@@ -32,7 +31,10 @@ function ensureConfig() {
 }
 
 async function createGitHubApp() {
-  if (!ensureConfig()) return null;
+  if (!ensureConfig()) {
+    process.exitCode = 1;
+    return null;
+  }
 
   const url = `https://api.github.com/orgs/${ORG_NAME}/apps`;
 
