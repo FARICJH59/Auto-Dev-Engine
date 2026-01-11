@@ -13,6 +13,7 @@ const WEBHOOK_URL = process.env.WEBHOOK_URL;
 const APP_URL = process.env.APP_URL || "https://brain-spark.io";
 const CALLBACK_URL = process.env.CALLBACK_URL || "https://brain-spark.io/callback";
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
+const APP_ID_UNAVAILABLE = "(unavailable)";
 
 function ensureConfig() {
   const missing = [
@@ -72,8 +73,8 @@ async function createGitHubApp() {
   let responseData = responseText;
   try {
     responseData = JSON.parse(responseText);
-  } catch {
-    // leave responseData as raw text when JSON parsing fails
+  } catch (err) {
+    console.warn("Received non-JSON response while creating app:", err?.message);
   }
 
   if (!response.ok) {
@@ -81,7 +82,7 @@ async function createGitHubApp() {
     return null;
   }
 
-  const appId = typeof responseData === "object" && responseData !== null ? responseData.id : "(unavailable)";
+  const appId = typeof responseData === "object" && responseData !== null ? responseData.id : APP_ID_UNAVAILABLE;
 
   console.log("GitHub App created successfully!");
   console.log("App ID:", appId);
