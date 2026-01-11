@@ -6,6 +6,24 @@ _Create and run a GitHub Actions workflow._
 
 </header>
 
+## Dynamic GitHub App Creator
+
+Use `create-github-app.mjs` to register the Brain Spark orchestrator app for your organization.
+
+1. Copy `.env.example` to `.env` and fill in your token:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Run the script:
+
+   ```bash
+   node create-github-app.mjs
+   ```
+
+The script will POST to `https://api.github.com/orgs/<GITHUB_ORG>/apps` and output the created app ID and webhook details.
+
 ## Step 1: Create a workflow file
 
 _Welcome to "Hello GitHub Actions"! :wave:_
