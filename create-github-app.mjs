@@ -74,7 +74,7 @@ async function createGitHubApp() {
   try {
     responseData = JSON.parse(responseText);
   } catch (err) {
-    console.warn("Received non-JSON response while creating app:", err?.message);
+    console.warn("Failed to parse JSON response:", err?.message);
   }
 
   if (!response.ok) {
