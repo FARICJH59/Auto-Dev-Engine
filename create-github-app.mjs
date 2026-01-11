@@ -18,7 +18,7 @@ if (existsSync(envPath)) {
     .forEach((line) => {
       const [key, ...rest] = line.split("=");
       const value = rest.join("=").trim();
-      if (!process.env[key] && key) {
+      if (typeof process.env[key] === "undefined" && key) {
         process.env[key] = value.replace(/^['"]|['"]$/g, "");
       }
     });
@@ -77,14 +77,20 @@ async function createGitHubApp() {
   const response = await fetch(url, {
     method: "POST",
     headers: {
-      Authorization: `token ${PAT}`,
+      Authorization: `Bearer ${PAT}`,
       "Content-Type": "application/json",
       Accept: "application/vnd.github+json",
     },
     body: JSON.stringify(body),
   });
 
-  const data = await response.json();
+  const rawBody = await response.text();
+  let data = rawBody;
+  try {
+    data = JSON.parse(rawBody);
+  } catch {
+    // leave data as raw text when JSON parsing fails
+  }
 
   if (!response.ok) {
     console.error("GitHub App creation failed:", data);
@@ -92,7 +98,7 @@ async function createGitHubApp() {
   }
 
   console.log("GitHub App created successfully!");
-  console.log("App ID:", data.id);
+  console.log("App ID:", typeof data === "object" && data !== null ? data.id : "(unavailable)");
   console.log("Webhook URL:", WEBHOOK_URL);
   console.log("Callback URL:", CALLBACK_URL);
 
