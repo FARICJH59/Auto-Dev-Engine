@@ -61,7 +61,7 @@ async function createGitHubApp() {
   const response = await fetch(url, {
     method: "POST",
     headers: {
-      Authorization: `token ${PAT}`,
+      Authorization: `Bearer ${PAT}`,
       "Content-Type": "application/json",
       Accept: "application/vnd.github+json",
     },
