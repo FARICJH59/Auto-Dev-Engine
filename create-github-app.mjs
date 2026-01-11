@@ -4,25 +4,7 @@
  * Registers a GitHub App under an organization and sets up webhooks for Brain Spark orchestration
  */
 
-import { existsSync, readFileSync } from "fs";
-import { resolve } from "path";
-
-const envPath = resolve(process.cwd(), ".env");
-
-if (existsSync(envPath)) {
-  const contents = readFileSync(envPath, "utf8");
-  contents
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith("#"))
-    .forEach((line) => {
-      const [key, ...rest] = line.split("=");
-      const value = rest.join("=").trim();
-      if (typeof process.env[key] === "undefined" && key) {
-        process.env[key] = value.replace(/^['"]|['"]$/g, "");
-      }
-    });
-}
+import "dotenv/config";
 
 const ORG_NAME = process.env.GITHUB_ORG;
 const PAT = process.env.GITHUB_PAT;
@@ -77,32 +59,34 @@ async function createGitHubApp() {
   const response = await fetch(url, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${PAT}`,
+      Authorization: `token ${PAT}`,
       "Content-Type": "application/json",
       Accept: "application/vnd.github+json",
     },
     body: JSON.stringify(body),
   });
 
-  const rawBody = await response.text();
-  let data = rawBody;
+  const responseText = await response.text();
+  let responseData = responseText;
   try {
-    data = JSON.parse(rawBody);
+    responseData = JSON.parse(responseText);
   } catch {
-    // leave data as raw text when JSON parsing fails
+    // leave responseData as raw text when JSON parsing fails
   }
 
   if (!response.ok) {
-    console.error("GitHub App creation failed:", data);
+    console.error("GitHub App creation failed:", responseData);
     return null;
   }
 
+  const appId = typeof responseData === "object" && responseData !== null ? responseData.id : "(unavailable)";
+
   console.log("GitHub App created successfully!");
-  console.log("App ID:", typeof data === "object" && data !== null ? data.id : "(unavailable)");
+  console.log("App ID:", appId);
   console.log("Webhook URL:", WEBHOOK_URL);
   console.log("Callback URL:", CALLBACK_URL);
 
-  return data;
+  return responseData;
 }
 
 createGitHubApp()
